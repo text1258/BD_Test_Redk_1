@@ -235,7 +235,7 @@ table.data th{background:var(--sunken);font-weight:600;font-size:12.5px}
         <span class="brand-mark" aria-hidden="true">БД</span>
         <div>
           <div class="brand-name">Тренажёр по БД и ИС</div>
-          <div class="brand-sub">Тест по основам баз данных · часть 1 · 70 вопросов · варианты составил Claude по лекциям, в 8 вопросах есть вариант из файла</div>
+          <div class="brand-sub">Тест по основам БД · часть 1 · 70 вопросов, 78 заданий · варианты составил Claude по лекциям; в 8 вопросах два варианта — из файла и Claude, пройти нужно оба</div>
         </div>
       </div>
       <nav class="top-actions">
@@ -283,7 +283,7 @@ const SECT = [null,
   {name:"ООП, сети и Semantic Web", from:59, to:70}
 ];
 const LET = "АБВГДЕЖЗИКЛМН";
-const DATA_V = 3;
+const DATA_V = 4;
 
 /* ---------- Вопросы ---------- */
 const Q = [
@@ -623,7 +623,12 @@ function answerText(it){
   if(it.o) return it.o.filter(o => o.ok === true).map(o => o.t).join("; ");
   return String(it.ans || "");
 }
-const ALL = Q.map(q => q.n);
+const ALL = [];
+Q.forEach(q => { if(q.alt) ALL.push(q.n + "f", q.n + "c"); else ALL.push(String(q.n)); });
+const keyQ = k => QM[parseInt(k, 10)];
+const keyVar = k => /f$/.test(k) ? "file" : (/c$/.test(k) ? "mine" : null);
+const keyLabel = k => { const v = keyVar(k); return parseInt(k, 10) + (v === "file" ? " · файл" : v === "mine" ? " · Claude" : ""); };
+const varName = k => keyVar(k) === "file" ? "вариант из файла" : "вариант Claude";
 const typeOf = q => q.t === "g" ? q.tt : q.t;
 
 /* ---------- Логика ответа ---------- */
@@ -671,7 +676,7 @@ const KEY = "bdis-trainer-v1";
 const reduceMotion = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let prog = {status:{}};
 let round = null, roundNo = 0;
-let view = "test", back = "test", viewN = 1;
+let view = "test", back = "test", viewN = "1";
 let listFilter = "all", listQ = "";
 let menuConfirm = false;
 const browseSt = {};
@@ -730,7 +735,7 @@ function updateSyncNote(){
 }
 function validRound(saved){
   const r = saved && saved.round;
-  return !!(saved && saved.v === DATA_V && r && Array.isArray(r.queue) && r.queue.length && r.queue.every(n => QM[n]) && typeof r.idx === "number");
+  return !!(saved && saved.v === DATA_V && r && Array.isArray(r.queue) && r.queue.length && r.queue.every(n => ALL.includes(n)) && typeof r.idx === "number");
 }
 function applyState(saved){
   if(saved && saved.status && typeof saved.status === "object") prog.status = saved.status;
@@ -776,7 +781,8 @@ function startRound(kind, queue, name, sql){
   view = "test"; menuConfirm = false;
   save(); rerender(); toTop();
 }
-function getSt(n){ if(!round.res[n]) round.res[n] = prepare(QM[n]); return round.res[n]; }
+function prepKey(k){ const st = prepare(keyQ(k), keyVar(k)); st.key = k; return st; }
+function getSt(n){ if(!round.res[n]) round.res[n] = prepKey(n); return round.res[n]; }
 function counts(){
   let ok = 0, bad = 0;
   for(const n of round.queue){ const s = round.res[n]; if(s && s.done){ if(s.ok) ok++; else bad++; } }
@@ -787,7 +793,7 @@ function statusCounts(){
   for(const n of ALL){ if(prog.status[n] === "ok") ok++; else if(prog.status[n] === "bad") bad++; }
   return {ok, bad, none:ALL.length - ok - bad};
 }
-function sectionQueue(k){ const s = SECT[k]; return ALL.filter(n => n >= s.from && n <= s.to); }
+function sectionQueue(k){ const s = SECT[k]; return ALL.filter(x => { const n = parseInt(x, 10); return n >= s.from && n <= s.to; }); }
 
 /* ---------- Действия ---------- */
 function switchVar(q, mode, v){
@@ -800,13 +806,13 @@ function doCheck(q, st, mode){
   const it = itOf(q, st);
   if(st.done || !complete(it, st)) return;
   st.ok = grade(it, st); st.done = true;
-  prog.status[q.n] = st.ok ? "ok" : "bad";
+  prog.status[st.key] = st.ok ? "ok" : "bad";
   save(); rerender(); afterAnswer(mode);
 }
 function doGiveUp(q, st, mode){
   if(st.done) return;
   st.done = true; st.ok = false; st.gave = true;
-  if(mode === "round") prog.status[q.n] = "bad";
+  if(mode === "round") prog.status[st.key] = "bad";
   save(); rerender(); afterAnswer(mode);
 }
 function afterAnswer(mode){
@@ -912,7 +918,7 @@ function renderMatch(it, st){
   return wrap;
 }
 function renderInput(q, it, st, mode){
-  const inp = h("input", {class:"inp", id:`ans-${mode}-${q.n}`, type:"text", inputmode:it.t === "n" ? "numeric" : null,
+  const inp = h("input", {class:"inp", id:`ans-${mode}-${st.key}`, type:"text", inputmode:it.t === "n" ? "numeric" : null,
     autocomplete:"off", spellcheck:"false", value:st.sel, disabled:st.done || null, "aria-label":"Ваш ответ",
     placeholder:it.t === "n" ? "Число" : "Ваш ответ"});
   inp.addEventListener("input", () => {
@@ -949,16 +955,13 @@ function renderFeedback(q, it, st){
 function renderCard(q, st, mode){
   const it = itOf(q, st);
   const card = h("article", {class:"card" + (st.done && !st.gave ? (st.ok ? " is-ok" : " is-bad") : (st.done ? " is-bad" : ""))});
-  card.append(h("div", {class:"qmeta"}, h("span", {class:"qnum"}, "№ " + q.n), h("span", {class:"tag"}, TYPE[it.t]), q.alt ? h("span", {class:"tag tag-var"}, "2 варианта") : null, h("span", null, SECT[q.sec].name)));
+  card.append(h("div", {class:"qmeta"}, h("span", {class:"qnum"}, "№ " + parseInt(st.key, 10)), h("span", {class:"tag"}, TYPE[it.t]), q.alt ? h("span", {class:"tag tag-var"}, varName(st.key) + " · 1 из 2".replace("1", keyVar(st.key) === "file" ? "1" : "2")) : null, h("span", null, SECT[q.sec].name)));
   card.append(h("h2", {class:"qtext"}, it.q));
   if(q.alt){
     const isFile = st.variant === "file";
     card.append(h("div", {class:"variant"},
-      h("div", {class:"var-h"}, "Ответы в файле и у Claude расходятся. Выберите вариант:"),
-      h("div", {class:"var-btns", role:"group", "aria-label":"Вариант ответа"},
-        h("button", {type:"button", class:"vbtn", "aria-pressed":String(isFile), disabled:st.done || null, onclick:() => switchVar(q, mode, "file")}, "Из файла «Редька тест БД»"),
-        h("button", {type:"button", class:"vbtn", "aria-pressed":String(!isFile), disabled:st.done || null, onclick:() => switchVar(q, mode, "mine")}, "Вариант Claude (по лекциям)")),
-      h("p", {class:"var-src"}, isFile ? "Сейчас: правильный ответ взят из файла «Редька тест БД», варианты-ловушки добавил Claude." : "Сейчас: варианты и правильный ответ составил Claude по лекциям из архива.")));
+      h("div", {class:"var-h"}, "Ответы в файле и у Claude расходятся — этот вопрос нужно пройти в двух вариантах."),
+      h("p", {class:"var-src"}, isFile ? "Вариант 1 из 2 — из файла «Редька тест БД»: правильный ответ взят из файла, варианты-ловушки добавил Claude." : "Вариант 2 из 2 — составил Claude по лекциям из архива: и варианты, и правильный ответ.")));
   }
   if(it.extra) card.append(renderExtra(it.extra));
   if(!st.done) card.append(h("p", {class:"hint"}, HINT[it.t]));
@@ -972,7 +975,7 @@ function renderCard(q, st, mode){
     acts.append(h("button", {class:"btn", type:"button", onclick:() => doGiveUp(q, st, mode)}, mode === "round" ? "Не знаю — показать ответ" : "Показать ответ"));
     card.append(acts);
   } else if(mode === "view"){
-    acts.append(h("button", {class:"btn btn-next", type:"button", onclick:() => { browseSt[q.n] = prepare(q); rerender(); }}, "Ответить ещё раз"));
+    acts.append(h("button", {class:"btn btn-next", type:"button", onclick:() => { browseSt[st.key] = prepKey(st.key); rerender(); }}, "Ответить ещё раз"));
     card.append(acts);
   }
   if(st.done) card.append(renderFeedback(q, it, st));
@@ -994,14 +997,14 @@ function renderHeader(){
     let cls = "seg";
     if(s && s.done) cls += s.ok ? " ok" : " bad";
     if(i === round.idx && view === "test") cls += " cur";
-    strip.append(h("button", {class:cls, type:"button", title:`№ ${n}`, "aria-label":`Перейти к вопросу ${n}`, onclick:() => goTo(i)}));
+    strip.append(h("button", {class:cls, type:"button", title:`№ ${keyLabel(n)}`, "aria-label":`Перейти к вопросу ${keyLabel(n)}`, onclick:() => goTo(i)}));
   });
   $("#btn-list").setAttribute("aria-pressed", String(view === "list"));
   $("#btn-menu").setAttribute("aria-pressed", String(view === "menu"));
 }
 function renderTest(){
   const v = $("#v-test"); v.replaceChildren();
-  const n = round.queue[round.idx], q = QM[n], st = getSt(n);
+  const n = round.queue[round.idx], q = keyQ(n), st = getSt(n);
   v.append(renderCard(q, st, "round"));
   const last = round.idx === round.queue.length - 1;
   v.append(h("div", {class:"qnav"},
@@ -1012,9 +1015,9 @@ function renderTest(){
       : h("button", {class:"btn ghost", type:"button", onclick:goNext}, last ? "Пропустить, к итогам →" : "Пропустить →")));
 }
 function qRow(n, label){
-  const q = QM[n], s = prog.status[n];
+  const q = keyQ(n), s = prog.status[n];
   return h("button", {class:"row" + (s === "ok" ? " ok" : s === "bad" ? " bad" : ""), type:"button", onclick:() => openView(n)},
-    h("span", {class:"num"}, n), h("span", {class:"rt"}, q.q), h("span", {class:"rk"}, label || (q.alt ? "2 варианта" : TYPE_SHORT[typeOf(q)])));
+    h("span", {class:"num"}, parseInt(n, 10)), h("span", {class:"rt"}, q.alt ? `(${varName(n)}) ${q.q}` : q.q), h("span", {class:"rk"}, label || TYPE_SHORT[typeOf(q)]));
 }
 function renderSummary(){
   const v = $("#v-summary"); v.replaceChildren();
@@ -1052,7 +1055,7 @@ function renderListRows(host){
       if(listFilter === "bad" && s !== "bad") return false;
       if(listFilter === "ok" && s !== "ok") return false;
       if(listFilter === "none" && s) return false;
-      if(qn && !norm(n + " " + QM[n].q).includes(qn)) return false;
+      if(qn && !norm(keyLabel(n) + " " + (keyQ(n).alt ? varName(n) + " " : "") + keyQ(n).q).includes(qn)) return false;
       return true;
     });
     if(!items.length) continue;
@@ -1079,8 +1082,8 @@ function renderList(){
 }
 function renderView(){
   const v = $("#v-view"); v.replaceChildren();
-  const q = QM[viewN];
-  if(!browseSt[viewN]) browseSt[viewN] = prepare(q);
+  const q = keyQ(viewN);
+  if(!browseSt[viewN]) browseSt[viewN] = prepKey(viewN);
   const st = browseSt[viewN];
   const i = ALL.indexOf(viewN);
   v.append(h("div", {class:"stack"},
@@ -1090,9 +1093,9 @@ function renderView(){
     h("p", {class:"note"}, "Режим просмотра: ответ здесь не влияет на текущий круг теста."),
     renderCard(q, st, "view"),
     h("div", {class:"qnav"},
-      h("button", {class:"btn ghost", type:"button", disabled:i === 0 || null, onclick:() => { viewN = ALL[i - 1]; rerender(); toTop(); }}, i > 0 ? `← № ${ALL[i - 1]}` : "←"),
-      h("span", {class:"pos"}, `№ ${viewN} из ${ALL.length}`),
-      h("button", {class:"btn ghost", type:"button", disabled:i === ALL.length - 1 || null, onclick:() => { viewN = ALL[i + 1]; rerender(); toTop(); }}, i < ALL.length - 1 ? `№ ${ALL[i + 1]} →` : "→"))));
+      h("button", {class:"btn ghost", type:"button", disabled:i === 0 || null, onclick:() => { viewN = ALL[i - 1]; rerender(); toTop(); }}, i > 0 ? `← № ${keyLabel(ALL[i - 1])}` : "←"),
+      h("span", {class:"pos"}, `${i + 1} из ${ALL.length}`),
+      h("button", {class:"btn ghost", type:"button", disabled:i === ALL.length - 1 || null, onclick:() => { viewN = ALL[i + 1]; rerender(); toTop(); }}, i < ALL.length - 1 ? `№ ${keyLabel(ALL[i + 1])} →` : "→"))));
 }
 function menuItem(title, desc, sql, onclick, disabled){
   return h("button", {class:"menu-item", type:"button", disabled:disabled || null, onclick},
@@ -1104,8 +1107,8 @@ function renderMenu(){
   const notOk = ALL.filter(n => prog.status[n] !== "ok");
   const bad = ALL.filter(n => prog.status[n] === "bad");
   const list = h("div", {class:"menu-list"},
-    menuItem("Весь тест по порядку", "70 вопросов, № 1–70", "SELECT * FROM Вопросы ORDER BY Номер", () => startRound("all", ALL.slice(), "Весь тест по порядку", "SELECT * FROM Вопросы ORDER BY Номер")),
-    menuItem("Весь тест вперемешку", "70 вопросов в случайном порядке", "SELECT * FROM Вопросы -- случайный порядок", () => startRound("shuffle", shuffle(ALL), "Весь тест вперемешку", "SELECT * FROM Вопросы -- случайный порядок")),
+    menuItem("Весь тест по порядку", `${ALL.length} заданий: 70 вопросов, в 8 из них два варианта`, "SELECT * FROM Вопросы ORDER BY Номер", () => startRound("all", ALL.slice(), "Весь тест по порядку", "SELECT * FROM Вопросы ORDER BY Номер")),
+    menuItem("Весь тест вперемешку", `${ALL.length} заданий в случайном порядке`, "SELECT * FROM Вопросы -- случайный порядок", () => startRound("shuffle", shuffle(ALL), "Весь тест вперемешку", "SELECT * FROM Вопросы -- случайный порядок")),
     menuItem("Только ошибки", bad.length ? `${bad.length} ${plural(bad.length, "вопрос", "вопроса", "вопросов")} с последним неверным ответом` : "Ошибок пока нет", "SELECT * FROM Вопросы WHERE Ответ = 'неверно'",
       () => startRound("bad", bad, `Только ошибки (${bad.length})`, "SELECT * FROM Вопросы WHERE Ответ = 'неверно'"), !bad.length),
     menuItem("Всё, что ещё не отвечено верно", notOk.length ? `${notOk.length} ${plural(notOk.length, "вопрос", "вопроса", "вопросов")}` : "Все 70 вопросов отвечены верно", "SELECT * FROM Вопросы WHERE Ответ IS NULL OR Ответ = 'неверно'",
@@ -1123,7 +1126,7 @@ function renderMenu(){
   v.append(h("div", {class:"stack"},
     h("div", {class:"backbar"}, h("button", {class:"btn primary", type:"button", onclick:returnBack}, backLabel())),
     h("div", null, h("h1", {class:"h1"}, "Новый круг"),
-      h("p", {class:"muted"}, `Текущий круг заменится новым, общий прогресс сохранится. Сейчас верно отвечено ${sc.ok} из 70.`)),
+      h("p", {class:"muted"}, `Текущий круг заменится новым, общий прогресс сохранится. Сейчас верно отвечено ${sc.ok} из ${ALL.length} заданий.`)),
     list, h("div", null, reset)));
 }
 function rerender(){
@@ -1146,7 +1149,7 @@ function boot(){
     const tag = (e.target && e.target.tagName || "").toLowerCase();
     if(tag === "button" || tag === "input" || tag === "textarea" || tag === "a") return;
     if(view !== "test") return;
-    const n = round.queue[round.idx], q = QM[n], st = getSt(n);
+    const n = round.queue[round.idx], q = keyQ(n), st = getSt(n);
     e.preventDefault();
     if(st.done) goNext(); else if(complete(itOf(q, st), st)) doCheck(q, st, "round");
   });
