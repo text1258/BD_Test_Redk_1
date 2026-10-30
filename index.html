@@ -1,0 +1,1161 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Тренажёр по БД и ИС</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: одна колонка до 760px; шапка с кругом и полосой прогресса, ниже карточка вопроса и навигация */
+:root{
+  --bg:#F1F3F7; --surface:#FFFFFF; --sunken:#E7EAF1; --line:#D3D8E2; --fg:#141824; --muted:#5A6275;
+  --accent:#2E47C4; --accent-ink:#FFFFFF; --accent-soft:#E2E7FB;
+  --ok:#1C7A48; --ok-soft:#E0F2E7; --bad:#BC3830; --bad-soft:#FBE5E2; --maybe:#8E6200; --maybe-soft:#FAF0D6;
+  --font-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --font-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F121A; --surface:#171B26; --sunken:#1F2432; --line:#2C3345; --fg:#E6E9F1; --muted:#9AA2B6;
+    --accent:#8D9DFF; --accent-ink:#0F121A; --accent-soft:#242C4F;
+    --ok:#5BCB8D; --ok-soft:#163323; --bad:#F27E74; --bad-soft:#3B1D1B; --maybe:#E3B54C; --maybe-soft:#3A2F13;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F121A; --surface:#171B26; --sunken:#1F2432; --line:#2C3345; --fg:#E6E9F1; --muted:#9AA2B6;
+  --accent:#8D9DFF; --accent-ink:#0F121A; --accent-soft:#242C4F;
+  --ok:#5BCB8D; --ok-soft:#163323; --bad:#F27E74; --bad-soft:#3B1D1B; --maybe:#E3B54C; --maybe-soft:#3A2F13;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--font-body);-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button{font:inherit;color:inherit}
+.wrap{max-width:792px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* Шапка */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{padding-block:10px 8px;display:grid;gap:8px}
+.top-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.brand{display:flex;gap:10px;align-items:center;min-width:0}
+.brand-mark{font-family:var(--font-display);font-weight:700;font-size:12px;letter-spacing:.06em;background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:6px 7px;line-height:1}
+.brand-name{font-family:var(--font-display);font-weight:500;font-size:15px;line-height:1.25}
+.brand-sub{font-size:12px;color:var(--muted)}
+.top-actions{display:flex;gap:6px}
+.round-row{display:flex;justify-content:space-between;align-items:flex-end;gap:6px 14px;flex-wrap:wrap}
+.round-info{min-width:0;flex:1 1 260px}
+.round-name{font-weight:600;font-size:14px;line-height:1.3}
+.round-sql{display:block;font-family:var(--font-mono);font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sync{font-size:11.5px;color:var(--muted);margin-top:2px}
+.round-stats{display:flex;gap:12px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stat b{color:var(--fg);font-weight:600}
+.stat.ok b{color:var(--ok)}
+.stat.bad b{color:var(--bad)}
+.strip{display:flex;gap:1px;height:18px;align-items:center}
+.seg{flex:1 1 0;min-width:0;height:100%;padding:0;border:0;background:transparent;cursor:pointer;display:flex;align-items:center}
+.seg::before{content:"";display:block;width:100%;height:6px;border-radius:2px;background:var(--sunken)}
+.seg.ok::before{background:var(--ok)}
+.seg.bad::before{background:var(--bad)}
+.seg.cur::before{height:16px;background:var(--accent)}
+.seg.cur.ok::before{background:var(--ok)}
+.seg.cur.bad::before{background:var(--bad)}
+.seg:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* Кнопки */
+.btn{font-size:14px;font-weight:600;border-radius:9px;padding:9px 14px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:40px;line-height:1.2;text-align:center}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.opt:focus-visible,.ord-item:focus-visible,.chip-opt:focus-visible,.letbtn:focus-visible,.row:focus-visible,.fchip:focus-visible,.menu-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.main{padding-block:18px 56px}
+
+/* Карточка вопроса */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;gap:14px;min-width:0}
+.card.is-ok{border-color:var(--ok)}
+.card.is-bad{border-color:var(--bad)}
+.qmeta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:12.5px;color:var(--muted)}
+.qnum{font-family:var(--font-mono);font-weight:600;color:var(--fg);font-size:13px}
+.tag{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-weight:600;font-size:12px}
+.qtext{font-size:19px;line-height:1.42;font-weight:600;margin:0;text-wrap:pretty}
+.hint{margin:0;font-size:13px;color:var(--muted)}
+.tag-var{background:var(--maybe-soft);color:var(--maybe)}
+.variant{border:1px dashed var(--maybe);background:var(--maybe-soft);border-radius:10px;padding:10px 12px;display:grid;gap:8px}
+.var-h{font-weight:600;font-size:13.5px;color:var(--maybe)}
+.var-btns{display:flex;flex-wrap:wrap;gap:6px}
+.vbtn{font-size:13.5px;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.vbtn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.vbtn:disabled{cursor:default;opacity:.75}
+.vbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.var-src{margin:0;font-size:13px;font-weight:600}
+
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:20px minmax(0,1fr);column-gap:11px;row-gap:3px;align-items:start;text-align:left;font-size:15.5px;line-height:1.4;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);cursor:pointer;width:100%}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt:disabled{cursor:default;opacity:1}
+.box{width:18px;height:18px;margin-top:2px;border:2px solid var(--muted);border-radius:5px}
+.opts.single .box{border-radius:50%}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.opt.sel .box{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3px var(--accent-soft)}
+.opt.good{border-color:var(--ok);background:var(--ok-soft)}
+.opt.good .box{border-color:var(--ok);background:var(--ok);box-shadow:inset 0 0 0 3px var(--ok-soft)}
+.opt.missed{border-style:dashed;border-color:var(--ok)}
+.opt.missed .box{border-color:var(--ok)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt.wrong .box{border-color:var(--bad);background:var(--bad);box-shadow:inset 0 0 0 3px var(--bad-soft)}
+.opt.maybe{border-color:var(--maybe);background:var(--maybe-soft)}
+.opt.maybe .box{border-color:var(--maybe)}
+.opt.dim{opacity:.62}
+.opt-tag{grid-column:2;font-size:12px;font-weight:600;color:var(--muted)}
+.opt.good .opt-tag,.opt.missed .opt-tag{color:var(--ok)}
+.opt.wrong .opt-tag{color:var(--bad)}
+.opt.maybe .opt-tag{color:var(--maybe)}
+
+.blabel{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.ord{display:grid;gap:8px}
+.ord-ans{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ord-item{width:100%;display:grid;grid-template-columns:26px minmax(0,1fr);gap:8px;text-align:left;font-size:15px;line-height:1.4;padding:9px 12px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;color:var(--fg);cursor:pointer}
+.ord-item:disabled{cursor:default}
+.ord-n{font-family:var(--font-mono);font-weight:600;color:var(--accent)}
+.ord-item.good{border-color:var(--ok);background:var(--ok-soft)}
+.ord-item.good .ord-n{color:var(--ok)}
+.ord-item.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.ord-item.wrong .ord-n{color:var(--bad)}
+.ord-empty{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;color:var(--muted);font-size:14px}
+.ord-pool{display:flex;flex-wrap:wrap;gap:8px}
+.chip-opt{font-size:14.5px;line-height:1.35;text-align:left;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);cursor:pointer;max-width:100%}
+.chip-opt:hover{border-color:var(--accent)}
+
+.legend{list-style:none;margin:0;padding:12px 14px;background:var(--sunken);border-radius:10px;display:grid;gap:7px;font-size:14.5px;line-height:1.4}
+.legend li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px}
+.let{font-family:var(--font-mono);font-weight:600;color:var(--accent)}
+.match{display:grid;gap:8px}
+.mrow{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:8px}
+.mleft{font-weight:600;font-size:15px;line-height:1.4}
+.mfix{display:block;font-family:var(--font-mono);font-weight:600;font-size:13px;color:var(--bad);margin-top:2px}
+.lets{display:flex;flex-wrap:wrap;gap:6px}
+.letbtn{font-family:var(--font-mono);font-weight:600;min-width:40px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.letbtn:hover:not(:disabled){border-color:var(--accent)}
+.letbtn:disabled{cursor:default}
+.letbtn.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.mrow.good{border-color:var(--ok);background:var(--ok-soft)}
+.mrow.good .letbtn.sel{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.mrow.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.mrow.wrong .letbtn.sel{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.letbtn.right{outline:2px dashed var(--ok);outline-offset:1px}
+
+.inp{font:inherit;font-size:17px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);width:100%;max-width:420px}
+.inp:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.inp:disabled{opacity:.8}
+
+.extra{display:grid;gap:8px;min-width:0}
+.schema{margin:0;font-size:13px;color:var(--muted)}
+.sql{font-family:var(--font-mono);font-size:13.5px;line-height:1.55;background:var(--sunken);border-radius:10px;padding:12px 14px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.tables{display:flex;flex-wrap:wrap;gap:12px 20px}
+.tbl-wrap{overflow-x:auto;min-width:0;max-width:100%}
+table.data{border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+table.data caption{caption-side:top;text-align:left;font-weight:600;font-size:13px;padding-bottom:5px}
+table.data th,table.data td{border:1px solid var(--line);padding:5px 10px;text-align:left;white-space:nowrap}
+table.data th{background:var(--sunken);font-weight:600;font-size:12.5px}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.fb{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:6px}
+.fb-v{font-family:var(--font-display);font-weight:700;font-size:20px;line-height:1.2}
+.card.is-ok .fb-v{color:var(--ok)}
+.card.is-bad .fb-v{color:var(--bad)}
+.fb-h{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-top:6px}
+.fb-ex,.fb-ans{margin:0;max-width:68ch}
+.fb-ans{font-weight:600}
+.fb-list{margin:0;padding-left:22px;display:grid;gap:2px}
+.fb-pairs{display:grid;gap:6px}
+.fb-pair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.4fr);gap:8px;font-size:14.5px;line-height:1.4}
+.fb-pair .l{font-weight:600}
+.fb-pair .arrow{color:var(--muted)}
+
+.qnav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px}
+.pos{font-family:var(--font-mono);color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+
+/* Итоги, список, меню */
+.h1{font-family:var(--font-display);font-weight:500;font-size:24px;line-height:1.25;margin:0;text-wrap:balance}
+.muted{color:var(--muted);margin:0}
+.stack{display:grid;gap:16px}
+.backbar{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.score{font-family:var(--font-display);font-weight:700;font-size:48px;line-height:1;font-variant-numeric:tabular-nums}
+.score small{font-family:var(--font-body);font-size:17px;font-weight:500;color:var(--muted);margin-left:8px}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--sunken)}
+.bar span{display:block;height:100%}
+.bar .b-ok{background:var(--ok)}
+.bar .b-bad{background:var(--bad)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px}
+.rows{display:grid;gap:6px}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left;color:var(--fg);cursor:pointer;width:100%}
+.row:hover{border-color:var(--accent)}
+.num{font-family:var(--font-mono);font-weight:600;font-size:13px;min-width:36px;text-align:center;border-radius:6px;padding:3px 4px;background:var(--sunken);color:var(--muted)}
+.row.ok .num{background:var(--ok-soft);color:var(--ok)}
+.row.bad .num{background:var(--bad-soft);color:var(--bad)}
+.rt{font-size:14.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rk{font-size:12px;color:var(--muted);white-space:nowrap}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.fchip{font-size:13.5px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;font-variant-numeric:tabular-nums}
+.fchip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.sec-h{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin:14px 0 2px}
+.menu-list{display:grid;gap:8px}
+.menu-item{display:grid;gap:2px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);cursor:pointer;width:100%}
+.menu-item:hover:not(:disabled){border-color:var(--accent)}
+.menu-item:disabled{opacity:.5;cursor:not-allowed}
+.mi-t{font-weight:600;font-size:15px}
+.mi-d{font-size:13px;color:var(--muted)}
+.mi-sql{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.note{font-size:13px;color:var(--muted);margin:0}
+
+@media (max-width:600px){
+  .top{position:static}
+  body::before{display:none}
+  .brand-sub{display:none}
+  .card{padding:16px}
+  .qtext{font-size:17.5px}
+  .fb-pair{grid-template-columns:1fr;gap:0}
+  .fb-pair .arrow{display:none}
+  .rk{display:none}
+  .row{grid-template-columns:auto minmax(0,1fr)}
+  .score{font-size:40px}
+}
+@media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto!important} }
+</style>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="top-row">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">БД</span>
+        <div>
+          <div class="brand-name">Тренажёр по БД и ИС</div>
+          <div class="brand-sub">Тест по основам баз данных · часть 1 · 70 вопросов · варианты составил Claude по лекциям, в 8 вопросах есть вариант из файла</div>
+        </div>
+      </div>
+      <nav class="top-actions">
+        <button id="btn-list" class="btn ghost" type="button" aria-pressed="false">Все вопросы</button>
+        <button id="btn-menu" class="btn ghost" type="button" aria-pressed="false">Новый круг</button>
+      </nav>
+    </div>
+    <div class="round-row">
+      <div class="round-info">
+        <div id="round-name" class="round-name">Круг 1 · Весь тест по порядку</div>
+        <code id="round-sql" class="round-sql">SELECT * FROM Вопросы ORDER BY Номер</code>
+        <div id="sync" class="sync">Прогресс сохраняется в этом браузере</div>
+      </div>
+      <div id="round-stats" class="round-stats"></div>
+    </div>
+    <div id="strip" class="strip" aria-label="Вопросы текущего круга"></div>
+  </div>
+</header>
+
+<main class="wrap main">
+  <section id="v-test" aria-live="polite"></section>
+  <section id="v-summary" hidden></section>
+  <section id="v-list" hidden></section>
+  <section id="v-view" hidden></section>
+  <section id="v-menu" hidden></section>
+</main>
+
+<script>
+"use strict";
+/* ---------- Справочники ---------- */
+const TYPE = {s:"Один ответ", m:"Несколько ответов", o:"Последовательность", p:"Соответствие", x:"Текстовый ответ", n:"Введите число"};
+const TYPE_SHORT = {s:"1 ответ", m:"неск. ответов", o:"порядок", p:"соответствие", x:"текст", n:"число"};
+const HINT = {
+  s:"Выберите один вариант.",
+  m:"Отметьте все верные варианты.",
+  o:"Нажимайте варианты в нужном порядке. Нажатие на пункт в вашем списке убирает его.",
+  p:"Для каждой строки выберите букву из списка вариантов.",
+  x:"Введите слово или короткую фразу и нажмите «Проверить».",
+  n:"Введите число и нажмите «Проверить»."
+};
+const SECT = [null,
+  {name:"ИС, БД и данные", from:1, to:15},
+  {name:"Реляционная модель и Access", from:16, to:41},
+  {name:"СУБД, транзакции и SQL", from:42, to:58},
+  {name:"ООП, сети и Semantic Web", from:59, to:70}
+];
+const LET = "АБВГДЕЖЗИКЛМН";
+const DATA_V = 3;
+
+/* ---------- Вопросы ---------- */
+const Q = [
+{n:1, t:"s", q:"Основные компоненты информационной системы. Состав информационной системы включает:",
+ o:["+Модель данных, СУБД и приложения БД","-Аппаратные средства, программное обеспечение, правила, данные и специалистов","-Файлы, каталоги и файловую систему","-Таблицы, запросы, формы и отчёты","-Данные, метаданные и индексы","-Клиент, сервер и сеть"],
+ ex:"ИС = база данных (модель данных + СУБД) + приложения БД. Пользователи работают не с СУБД напрямую, а с прикладной системой, построенной на её платформе. Пять компонентов «аппаратура, ПО, правила, данные, специалисты» — это определение БД как системы, а не ИС. В тесте может быть написано: «база данных и приложения»."},
+{n:2, t:"m", q:"Определение базы данных. Отметьте верные формулировки.",
+ o:["+Организованная коллекция логически связанных данных и способов доступа к ним, их обработки и обслуживания","+Система для хранения и управления данными из пяти компонентов: аппаратные средства, ПО, правила, данные и специалисты","+Хранилище, где кроме данных хранятся связи между ними и описание процедур доступа, обработки и обслуживания","-Диск (носитель) с данными","-Набор программ для управления большим набором структурированной информации","-Набор правил и определений, которым подчиняются все объекты БД","-Именованная область внешней памяти","-Данные о данных"],
+ ex:"Лекция 2: БД — организованная коллекция логически связанных данных и способов доступа к ним (An organized collection of logically related data). «Диск с данными — это не БД». Набор программ — это СУБД, набор правил — модель данных, именованная область памяти — файл, данные о данных — метаданные."},
+{n:3, t:"m", q:"К недостаткам использования файловых систем для организации баз данных относятся:",
+ o:["+Сильная зависимость между программами и данными","+Длительное время разработки приложений","+Чрезмерная программная поддержка доступа к данным внутри приложений","+Трудности организации доступа к данным","+Избыточность хранения: дублирование данных в разных файлах","+Ограниченность совместного доступа к данным","+Изолированность данных: много файлов и форматов","+Слабая защита, видимость путей и имён файлов","+Сложность синхронного внесения изменений, нет поддержки целостности","-Независимость программ от данных","-Наличие единого языка запросов SQL","-Автоматическое восстановление после сбоев","-Поддержка транзакций","-Развитые средства защиты данных"],
+ ex:"Недостатки из лекции 1: зависимость программ от данных (долгая разработка, избыточная программная поддержка), трудный доступ, избыточность, ограниченный совместный доступ (нельзя одновременно менять разные записи одного файла), изолированность, слабая безопасность, нет атомарности обновлений и целостности. Независимость, SQL, восстановление и транзакции — это преимущества БД."},
+{n:4, t:"m", q:"Какие из перечисленных видов данных относятся к слабо- или неструктурированным данным?",
+ o:["+Тексты и документы","+Графика и изображения","+Мультимедиа: видео, аудио, речь","+Тексты программ и объектные модули","+Данные, произвольные по форме","+Данные, для которых правила и форматы определены лишь в самом общем виде","-Таблицы реляционной БД (записи и поля)","-Матрицы","-Списки и вектора","-Индексы таблиц"],
+ ex:"Неструктурированные — произвольные по форме: тексты, графика, мультимедиа. Слабоструктурированные — правила и форматы заданы лишь в самом общем виде. Их обычно хранят файловые системы: документы, тексты программ, объектные модули, графику, мультимедиа. Около 90% всех данных — неструктурированные."},
+{n:5, t:"m", q:"Какие из перечисленных видов данных относятся к структурированным данным?",
+ o:["+Линейные структуры: списки, вектора","+Табличные структуры: таблицы, матрицы","+Иерархические структуры (деревья)","+Таблицы реляционной БД (записи и поля)","+Данные, упорядоченные и организованные для применения к ним действий","-Текстовые документы","-Видео и аудио","-Графика","-Речь"],
+ ex:"Три типа структур данных: линейная (списки, вектора — адрес равен номеру элемента), табличная (таблицы, матрицы — адрес из нескольких параметров), иерархическая (адрес — маршрут от вершины дерева). У структурированных данных появляется атрибут «адрес»."},
+{n:6, t:"m", q:"Укажите основные направления автоматизации обработки неструктурированных данных в информационных системах.",
+ o:["+Использование языка XML (импорт XML в БД, Semantic Web)","+Системы управления контентом (CMS), в том числе системы управления документами (СУД, DMS)","+Text Mining: извлечение информации, реферирование, категоризация, кластеризация","-OLAP-системы","-Реляционные СУБД и SQL","-Стандарты MRP и ERP","-Инвертированные списки","-Система показателей BSC"],
+ ex:"Три направления развития ИС для неструктурированных данных: 1) XML — описание данных (HTML отвечает за вид, XML — за смысл); 2) CMS и системы документооборота; 3) Text Mining. OLAP и Data Mining работают с хранилищами структурированных данных."},
+{n:7, t:"s", q:"Выберите термин. «Данные о данных и способах доступа к ним, их обработки и обслуживания» — это …",
+ o:["+Метаданные","-Данные","-Информация","-Модель данных","-Индекс","-Журнал базы данных"],
+ ex:"Метаданные (Data about the data): структуры данных, индексы, процедуры, триггеры, ключи, представления. Другая формулировка из лекции: структурированные и кодированные данные, описывающие характеристики объектов-носителей информации для их идентификации, обнаружения, оценки и управления. Пример — каталог библиотеки: заголовок, автор, ключевые слова."},
+{n:8, t:"s", q:"Выберите термин. «Набор правил и определений, которым подчиняются все объекты, находящиеся внутри базы данных» — это …",
+ o:["+Модель данных","-Метаданные","-СУБД","-Схема БД","-Домен","-Реляционная алгебра"],
+ ex:"Модель данных — набор правил и определений для всех объектов БД. Реляционная модель — модель данных из трёх компонентов: структурного, манипуляционного и целостного."},
+{n:9, t:"m", q:"Укажите основные преимущества использования баз данных по сравнению с файловыми системами:",
+ o:["+Независимость данных, сокращение программной поддержки доступа","+Рост эффективности разработки приложений","+Возможность создания и использования стандартов","+Минимальная избыточность хранения данных","+Согласованность данных и совместный доступ к ним","+Улучшенный доступ к данным","+Рост качества данных","+Безопасность (защита) данных","+Сохранение и восстановление (Backup/Recovery)","-Сильная связь программ и данных","-Дублирование данных в разных файлах","-Изолированность данных","-Отсутствие метаданных","-Видимость путей и имён файлов пользователям"],
+ ex:"Преимущества БД (лекция 2): независимость данных, меньше программной поддержки, рост эффективности разработки, стандарты, минимальная избыточность, согласованность и совместный доступ, улучшенный доступ, качество данных, безопасность, резервирование и восстановление. Остальные варианты — недостатки файловых систем."},
+{n:10, t:"o", q:"Расставьте в порядке исторического развития ОСНОВНЫЕ МЕТОДЫ ОБРАБОТКИ И АНАЛИЗА ДАННЫХ в информационных системах.",
+ items:["Простые запросы и отчёты","Стандартизация и автоматизация отчётности (MRP, MRP II, ERP)","Моделирование — сценарии «что — если»","OLAP — оперативная аналитическая обработка","Data Mining — интеллектуальный анализ данных","Business Intelligence — бизнес-аналитика"],
+ ex:"Конец 1960-х — начало 1980-х: простые запросы и отчёты. Затем стандарты MRP/ERP и автоматизация отчётности. Середина 1990-х: моделирование «что-если» и OLAP. Конец 1990-х: Data Mining на основе хранилищ данных. Современный этап: Business Intelligence."},
+{n:11, t:"x", q:"Введите термин. «Результат взаимодействия данных и адекватных им методов» — это …",
+ acc:["информац"], ans:"Информация",
+ ex:"Информация — результат взаимодействия данных и адекватных им методов. Английская формулировка: data processed to be useful in decision-making — данные, обработанные для принятия решений."},
+{n:12, t:"s", q:"Структуры данных, индексы, процедуры, первичные и внешние ключи, представления — это …",
+ o:["+Метаданные","-Данные","-Информация","-Модель данных","-Объекты MS Access","-Приложения БД"],
+ ex:"Это метаданные — данные о данных и способах доступа, обработки и обслуживания. При размещении данных в БД появляется значительный объём метаданных."},
+{n:13, t:"s", q:"Выберите термин. «Объект базы данных, создаваемый с целью повышения производительности выполнения запросов» — это …",
+ o:["+Индекс","-Первичный ключ","-Представление (view)","-Журнал базы данных","-Домен","-Триггер"],
+ ex:"Индекс — объект БД для ускорения запросов. Формируется из значений одного или нескольких столбцов и указателей на строки. Другая формулировка (ранние БД): специальная таблица из двух полей — значение ключа и номер записи, упорядоченная по ключу. Поле-идентификатор — это первичный ключ, сохранённый запрос — представление, записи об изменениях — журнал."},
+{n:14, t:"s", q:"Индексы в базе данных используются:",
+ o:["+Для повышения скорости поиска данных и выполнения запросов","-Для защиты данных от несанкционированного доступа","-Для восстановления БД после сбоев","-Для уменьшения объёма БД","-Для хранения истории изменений","-Для оформления отчётов"],
+ ex:"Без индекса строку ищут последовательным просмотром таблицы. Индекс позволяет быстро найти строку по заданному значению. Составные индексы (несколько полей) ускоряют поиск сразу по нескольким полям."},
+{n:15, t:"o", q:"Эволюция современных баз данных: расставьте в порядке появления с конца 1960-х годов.",
+ items:["Инвертированные списки","Иерархические БД","Сетевые БД","Реляционные БД","Постреляционные (многомерные) БД","Объектно-ориентированные БД","Хранилища данных"],
+ ex:"Первое поколение: инвертированные списки (1966–69), иерархические (1969–73), сетевые (1973–76). Второе: реляционные (1976–90, модель Кодда 1970 г.). Далее постреляционные/многомерные (1990–93), объектно-ориентированные (1994–2000), хранилища данных (конец 1990-х)."},
+{n:16, t:"m", q:"Какие три ключевые инновации связаны с появлением первого поколения дореляционных баз данных?",
+ o:["+Таблицы: данные хранятся в таблицах с записями фиксированной длины","+Индексы (инвертированные списки)","+Связи между таблицами для поддержки целостности","-Язык SQL","-Транзакции","-Представления (views)","-Классы и объекты","-Реляционная алгебра","-Архитектура «клиент-сервер»"],
+ ex:"Ранние БД дали три инновации: таблицы, индексы (инвертированные списки, ADABAS, dBase, Clipper) и связи между таблицами для поддержки целостности (иерархия предок–потомок: потомок не существует без родителя). SQL, транзакции и объекты появились позже."},
+{n:17, t:"m", q:"Реляционная модель данных включает следующие компоненты:",
+ o:["+Структурный","+Манипуляционный","+Целостный","-Навигационный","-Иерархический","-Сетевой","-Транзакционный","-Физический","-Пользовательский"],
+ ex:"По Дейту реляционная модель включает три компонента: структурный (нормализованное n-арное отношение), манипуляционный (реляционная алгебра и исчисление) и целостный (целостность сущностей и ссылок). Пользовательский, концептуальный и внутренний — это уровни архитектуры БД."},
+{n:18, t:"x", q:"Введите ответ. Все объекты, хранимые внутри реляционной БД (исходные таблицы, представления, отчёты, формы, запросы, индексы), сводятся к двумерным таблицам особого вида. Что они собой представляют?",
+ acc:["отношени","relation"], ans:"Отношение (N-арное нормальное отношение, relation)",
+ ex:"Каждая такая таблица — N-арное нормальное отношение (relation), то есть простое множество: значения атомарны, дубликатов нет."},
+{n:19, t:"s", q:"Для обработки данных в реляционной БД используется …",
+ o:["+Аппарат теории множеств — реляционная алгебра и реляционное исчисление","-Навигационный доступ по записям","-Аппарат указателей (ссылок)","-Инвертированные списки","-Матричная алгебра","-Методы объектно-ориентированного программирования"],
+ ex:"Манипуляционная часть: реляционная алгебра (теория множеств: объединение, пересечение, разность, произведение…) и реляционное исчисление (исчисление предикатов первого порядка). Это сделало механизм обработки независимым от содержания БД."},
+{n:20, t:"x", q:"Введите термин. «Подмножество значений некоторого типа данных, имеющих определённый смысл» — это …",
+ acc:["домен"], ans:"Домен",
+ ex:"Домен — уточнение типа данных, семантическое понятие. Свойства: уникальное имя; определён на простом типе или другом домене; может иметь логическое условие; сравнимы только данные одного домена. Пример: «Номера пропусков» и «Номера групп» — оба целые числа, но несравнимы."},
+{n:21, t:"m", q:"Укажите, какие из перечисленных элементов входят в состав реляционной таблицы:",
+ o:["+Заголовок отношения (схема отношения)","+Тело отношения","+Атрибуты (столбцы)","+Кортежи (строки, записи)","?Первичный ключ","-Вложенная таблица в поле","-Формы и отчёты","-Макросы","-Указатели на другие записи"],
+ ex:"Отношение = заголовок (набор атрибутов, их число — степень отношения) + тело (набор кортежей, их число — мощность). Первичный ключ есть у каждого отношения, но это набор атрибутов, а не отдельная часть таблицы. Поэтому он помечен как спорный и при проверке не учитывается."},
+{n:22, t:"o", q:"Расставьте основные элементы, используемые для построения описания РЕЛЯЦИОННОЙ ТАБЛИЦЫ (от простого к сложному).",
+ items:["Тип данных","Домен","Атрибут","Кортеж","Отношение"],
+ ex:"Тип данных → домен (подмножество типа со смыслом) → атрибут (пара «имя: домен») → кортеж (набор пар «атрибут: значение») → отношение (заголовок + тело). Если в списке есть «схема БД», она идёт последней."},
+{n:23, t:"p", sample:6, q:"Основные понятия реляционной модели. Укажите соответствие обычного наименования (слева) и элемента реляционной модели.",
+ pairs:[["Таблица","Отношение"],["Запись (строка) таблицы","Кортеж"],["Название столбца","Атрибут"],["Заголовок таблицы","Схема отношения"],["Набор заголовков таблиц","Схема БД"],["Множество допустимых значений столбца","Домен"],["Тип столбца (число, строка, дата)","Тип данных"],["Число столбцов","Степень отношения"],["Число строк","Мощность отношения"],["Столбец с уникальными значениями (табельный номер)","Первичный ключ"]],
+ ex:"Таблица — отношение, запись — кортеж, столбец — атрибут, заголовок таблицы — схема отношения, набор заголовков — схема БД. Число атрибутов — степень, число кортежей — мощность. При каждой попытке выбирается 6 случайных пар из 10."},
+{n:24, t:"m", q:"К обязательным (фундаментальным) свойствам реляционной таблицы (отношения) относятся:",
+ o:["+Отсутствие кортежей-дубликатов","+Отсутствие упорядоченности кортежей","+Отсутствие упорядоченности атрибутов","+Атомарность значений атрибутов","-Упорядоченность строк по первичному ключу","-Фиксированный порядок столбцов","-Наличие индекса","-Возможность хранить в поле множество значений","-Обязательное заполнение всех полей (нет NULL)"],
+ ex:"Четыре фундаментальных свойства отношений: нет кортежей-дубликатов, нет порядка кортежей, нет порядка атрибутов, значения атрибутов атомарны. Результат с ORDER BY — уже не отношение, а упорядоченный список кортежей."},
+{n:25, t:"s", q:"Какое из свойств реляционной таблицы определяет наличие в ней первичного ключа?",
+ o:["+Отсутствие кортежей-дубликатов","-Отсутствие упорядоченности кортежей","-Отсутствие упорядоченности атрибутов","-Атомарность значений атрибутов","-Целостность по ссылкам"],
+ ex:"Отношение — множество, а в множестве нет одинаковых элементов. Значит, у каждого отношения есть набор атрибутов, однозначно определяющий кортеж, — первичный ключ."},
+{n:26, t:"s", q:"Для построения первичного ключа может использоваться:",
+ o:["+Набор атрибутов (один или несколько), значения которых однозначно определяют кортеж","-Только числовое поле","-Любое поле, даже с повторяющимися значениями","-Внешний ключ","-Порядковый номер строки в файле","-Индекс таблицы"],
+ ex:"Первичный ключ — набор атрибутов, однозначно определяющий кортеж. Он должен быть минимальным: в нём нет атрибутов, без которых свойство сохраняется. Теоретически ключом может служить весь набор атрибутов, на практике — чаще один столбец (табельный номер, ИНН)."},
+{n:27, t:"s", q:"Свойство атомарности реляционной таблицы означает:",
+ o:["+Значения всех атрибутов атомарны: в поле нельзя хранить множество значений или другую таблицу","-В таблице нет одинаковых строк","-Строки таблицы не упорядочены","-Таблицу нельзя разделить на несколько таблиц","-Изменения вносятся целиком или не вносятся вовсе"],
+ ex:"Атомарность — неделимость значений. Такие отношения называют нормализованными (первая нормальная форма). «Всё или ничего» — это атомарность транзакции, а не таблицы."},
+{n:28, t:"m", q:"Правило целостности реляционной модели включает целостность таблиц (сущностей) и целостность по ссылкам. Реляционная таблица целостна, если:",
+ o:["+Любой кортеж отличим от любого другого: у отношения есть первичный ключ","+Нет кортежей с одинаковым значением первичного ключа","+Для каждого значения внешнего ключа в таблице, на которую ведёт ссылка, есть кортеж с таким же значением первичного ключа","+Значение внешнего ключа либо ссылается на существующий кортеж, либо не определено (NULL)","-Все поля заполнены, NULL нигде не допускается","-Записи упорядочены по ключу","-Для таблицы построен индекс","-Внешний ключ совпадает с первичным ключом той же таблицы"],
+ ex:"Целостность сущностей: любой кортеж отличим от другого, повторов первичного ключа нет. Целостность по ссылкам: каждое значение внешнего ключа указывает на существующий кортеж или равно NULL. NULL в обычных полях допустим."},
+{n:29, t:"s", q:"Что означает целостность по ссылкам реляционной таблицы?",
+ o:["+Для каждого значения внешнего ключа в таблице, на которую ведёт ссылка, есть кортеж с таким же значением первичного ключа (или внешний ключ равен NULL)","-В таблице нет двух одинаковых записей","-У каждой таблицы есть первичный ключ","-Все ссылки хранятся в отдельном файле","-Между таблицами допустима только связь «один-к-одному»"],
+ ex:"Пример: если у сотрудника указан номер отдела, этот отдел должен существовать в таблице «Отделы». При удалении записи, на которую есть ссылки, возможны три подхода: запрет удаления, установка NULL, каскадное удаление."},
+{n:30, t:"g", g:"union", tt:"n", q:"Таблицы A и B: сколько записей даст операция объединения?"},
+{n:31, t:"g", g:"inter", tt:"n", q:"Таблицы A и B: сколько записей даст операция пересечения?"},
+{n:32, t:"g", g:"minus", tt:"n", q:"Таблицы A и B: сколько записей даст вычитание A − B?"},
+{n:33, t:"s", q:"Таблица A («Деталь») содержит список всех изделий, таблица B («Цех») — перечень цехов. Таблица C («Деталь», «Цех») показывает, какие детали изготавливаются в каком цехе. Какая формула даёт таблицу, показывающую, какие детали в каких цехах НЕ выпускаются?",
+ o:["+(A × B) − C","-C − (A × B)","-(A × B) ∩ C","-(A ∪ B) − C","-A − C","-C ÷ B (деление)","-A × B"],
+ ex:"A × B — все возможные пары «деталь–цех». Вычитаем C (пары, которые реально выпускаются) — остаются пары, которые не выпускаются."},
+{n:34, t:"s", q:"Таблица A (количество, название детали, цех) — список деталей по цехам. Что будет содержать результат двух операций: 1) ОГРАНИЧЕНИЕ A по условию (Название детали = «Узел Т1»); 2) ПРОЕКЦИЯ результата на «Цех»?",
+ o:["+Список цехов, в которых изготавливается деталь «Узел Т1» (без повторов)","-Список цехов и количество деталей «Узел Т1» в каждом","-Список цехов, где «Узел Т1» не изготавливается","-Все цеха предприятия","-Список деталей, изготавливаемых в цехе №1","-Общее количество деталей «Узел Т1»"],
+ ex:"Ограничение оставляет строки с «Узел Т1» (горизонтальная вырезка). Проекция на «Цех» оставляет один столбец и удаляет дубликаты (вертикальная вырезка). Количество в результат не попадает."},
+{n:35, t:"p", q:"Укажите соответствие названий специальных реляционных операций и их назначения.",
+ pairs:[["Ограничение","Горизонтальная вырезка: кортежи, удовлетворяющие условию (WHERE)"],["Проекция","Вертикальная вырезка: только заданные атрибуты, дубликаты удаляются"],["Соединение","Сцепление кортежей двух отношений, удовлетворяющих условию (произведение + ограничение)"],["Деление","Деление бинарного отношения A(a, b) на унарное B(b) даёт унарное отношение C(a)"]],
+ ex:"Ограничение — «горизонтальная» вырезка (строки), проекция — «вертикальная» (столбцы, без дубликатов). Соединение = произведение + ограничение; частный случай — эквисоединение (условие a = b). Деление — бинарное отношение на унарное."},
+{n:36, t:"m", q:"К дополнительным реляционным операциям относятся:",
+ o:["+Присваивание","+Переименование","-Объединение","-Пересечение","-Разность","-Декартово произведение","-Ограничение","-Проекция","-Соединение","-Деление"],
+ ex:"10 операций реляционной алгебры: 4 теоретико-множественные (объединение, пересечение, разность, произведение), 4 специальные (ограничение, проекция, соединение, деление), 2 дополнительные (присваивание, переименование)."},
+{n:37, t:"s", q:"Операция переименования используется в реляционной базе данных:",
+ o:["+Для корректного формирования заголовка (схемы) результирующего отношения при конфликте имён атрибутов","-Для сохранения результата вычислений в БД","-Для переименования файла БД","-Для изменения значений в теле отношения","-Для удаления дубликатов"],
+ ex:"Переименование меняет имена атрибутов, тело остаётся прежним. Нужно, чтобы отношения стали совместимы по объединению или по произведению. Сохранение результата в БД — операция присваивания."},
+{n:38, t:"m", q:"Укажите, какие из перечисленных элементов относятся к объектам MS Access 2003/2007:",
+ o:["+Таблицы","+Запросы","+Формы","+Отчёты","+Макросы","+Модули","+Страницы доступа к данным","-Листы и книги","-Триггеры","-Хранимые процедуры","-Домены","-Кортежи","-Слайды"],
+ ex:"Объекты Access — всё, что имеет имя: таблицы, запросы, формы, отчёты (представлены реляционными таблицами), макросы и модули (программный код VBA), страницы (HTML и XML)."},
+{n:39, t:"p", q:"Укажите соответствие объектов MS Access 2003/2007 их описаниям.",
+ pairs:[["Таблица","Хранение данных"],["Запрос","Отбор нужных данных из одной или нескольких таблиц по критериям"],["Форма","Ввод, редактирование, удаление и просмотр данных"],["Отчёт","Документ для просмотра и печати"],["Макрос","Описание действий, выполняемых в ответ на событие"],["Модуль","Процедуры и функции на VBA для сложных вычислений"],["Страница","Работа с данными через Интернет или интрасеть (HTML, XML)"]],
+ ex:"Таблица хранит данные, запрос отбирает их (результат — всегда таблица), форма — посредник для ввода и правки, отчёт — только просмотр и печать, макрос — действия по событию, модуль — код VBA, страница — доступ через Интернет или интрасеть."},
+{n:40, t:"x", q:"Введите термин. Объект MS Access, представляющий собой структурированное описание одного или нескольких действий, которые выполняются в ответ на определённое событие, — это …",
+ acc:["макрос"], ans:"Макрос",
+ ex:"Макрос — структурированное описание действий в ответ на событие: например, открыть другую форму при выборе элемента или проверить значение поля. Если возможностей макроса не хватает, используют модуль на VBA."},
+{n:41, t:"x", q:"Введите ответ. Что является результатом выполнения запроса к реляционной базе данных?",
+ acc:["таблиц","отношени"], ans:"Таблица (отношение)",
+ ex:"Результат запроса — всегда таблица: её структура задаётся списком полей, а состав записей — критериями отбора."},
+{n:42, t:"m", q:"Архитектура БД включает три уровня: пользовательский, концептуальный и внутренний. Укажите функции ПОЛЬЗОВАТЕЛЬСКОГО уровня:",
+ o:["+Интерфейс пользователя","+Права доступа пользователей (командные и объектные)","+Представления (views)","+Хранимые процедуры и пользовательские функции","+Триггеры","+Команды управления БД: создание и удаление объектов, копирование, восстановление","-Типы данных","-Описание сущностей и их атрибутов","-Связи и ограничения, логическая структура БД","-Размещение данных на физических носителях","-Распределение пространства и структура записей","-Сжатие и шифрование данных"],
+ ex:"Пользовательский (внешний) уровень: интерфейс и права доступа, представления, процедуры, функции, триггеры. Концептуальный: типы данных, сущности, связи и ограничения, проектирование. Внутренний: физическое хранение, интерфейс с ОС, сжатие и шифрование."},
+{n:43, t:"m", q:"Архитектура БД включает три уровня: пользовательский, концептуальный и внутренний. Укажите функции КОНЦЕПТУАЛЬНОГО уровня:",
+ o:["+Поддержка проектирования БД: описание таблиц и связей, создание запросов, форм, отчётов","+Типы данных (встроенные и создаваемые разработчиком)","+Описание сущностей (объектов) через атрибуты","+Связи и ограничения: логическая структура БД","+Информация о безопасности и целостности","-Права доступа пользователей","-Представления для конкретного пользователя","-Триггеры","-Размещение данных на физических носителях","-Сжатие и шифрование данных","-Интерфейс с операционной системой"],
+ ex:"Концептуальный уровень обеспечивает проектирование БД и включает три компонента: типы данных, описание сущностей, связи и ограничения. Права, представления и триггеры — пользовательский уровень; хранение, ОС, сжатие — внутренний."},
+{n:44, t:"s", q:"Система управления базой данных — это:",
+ o:["+Набор программ для управления большим набором структурированной информации (БД) и выполнения операций над данными по запросам пользователей","-Организованная коллекция логически связанных данных","-Набор правил и определений для объектов БД","-Файловая система операционной системы","-Язык запросов SQL","-Приложение БД с пользовательским интерфейсом"],
+ ex:"СУБД — специальное ПО: управляет данными во внешней и оперативной памяти, транзакциями, журналом и поддерживает SQL. Коллекция данных — сама БД, набор правил — модель данных."},
+{n:45, t:"m", q:"К основным функциям СУБД относятся:",
+ o:["+Управление данными во внешней памяти (Data Manager)","+Управление буферами оперативной памяти (Buffers Manager)","+Управление транзакциями (Transaction Manager)","+Журнализация и восстановление БД после сбоев (Journal Manager)","+Поддержка языков БД (SQL)","-Компиляция программ на языках программирования","-Управление файловой системой ОС","-Data Mining и OLAP-анализ","-Визуализация данных в виде диаграмм","-Вёрстка документов для печати"],
+ ex:"Функции СУБД: Data Manager (внешняя память), Buffers Manager (буферы ОЗУ), Transaction Manager (согласованность и параллельная работа пользователей), Journal Manager (журнал и восстановление), поддержка SQL."},
+{n:46, t:"x", q:"Введите термин. Неделимая с точки зрения воздействия на БД последовательность операций манипулирования данными, выполняемая по принципу «всё или ничего» и переводящая БД из одного целостного состояния в другое, — это …",
+ acc:["транзакц"], ans:"Транзакция",
+ ex:"Транзакция — логическая единица работы с БД, может включать несколько запросов. Свойства АСИД (ACID): атомарность, согласованность, изоляция, долговечность."},
+{n:47, t:"s", q:"Управление транзакциями необходимо для обеспечения:",
+ o:["+Целостности (логической согласованности) данных в БД","-Защиты от несанкционированного доступа","-Скорости поиска данных","-Уменьшения объёма БД","-Формирования отчётов","-Сжатия и шифрования данных"],
+ ex:"Пример: перевод денег — с одного счёта ушли, на другой не пришли. Транзакции сохраняют целостность, служат единицами восстановления и обеспечивают изолированную параллельную работу пользователей. Если в тесте есть вариант «целостности и параллельной работы пользователей», он тоже верный."},
+{n:48, t:"s", q:"Свойство долговечности транзакции означает:",
+ o:["+Изменения успешно завершённой транзакции сохраняются даже после сбоя (обесточивание, отказ оборудования)","-Транзакция выполняется целиком или не выполняется вовсе","-Транзакция переводит БД из одного согласованного состояния в другое","-Другие процессы не видят данные в промежуточном состоянии","-Транзакция выполняется долго","-Данные хранятся в архиве неограниченно долго"],
+ ex:"АСИД: А — атомарность (всё или ничего), С — согласованность, И — изоляция, Д — долговечность (результат подтверждённой транзакции не теряется при сбое)."},
+{n:49, t:"s", q:"Журнал базы данных — это …",
+ o:["+Особая часть БД, недоступная пользователям, поддерживаемая с особой тщательностью и содержащая записи обо всех изменениях основной части БД","-Резервная (архивная) копия БД","-Таблица пользователей и их прав","-Словарь данных (системный каталог)","-Список «грязных» страниц","-Отчёт о работе пользователей"],
+ ex:"Иногда поддерживают две копии журнала на разных дисках. Принцип WAL («пиши сначала в журнал»): запись об изменении попадает во внешнюю память журнала раньше, чем изменённый объект — во внешнюю память БД."},
+{n:50, t:"s", q:"Журнал БД предназначен для …",
+ o:["+Восстановления БД после сбоев (обеспечения долговечности транзакций)","-Ускорения поиска","-Разграничения прав доступа","-Хранения метаданных","-Просмотра истории запросов пользователем","-Оформления отчётов"],
+ ex:"Три вида сбоев: отказ отдельной транзакции (откат по журналу), мягкий сбой — потеря оперативной памяти (undo незавершённых + redo завершённых), жёсткий сбой — повреждение дисков (архивная копия + журнал)."},
+{n:51, t:"s", q:"Во всех современных СУБД для поддержки работы пользователей с БД используется …",
+ o:["+Единый интегрированный язык SQL","-Несколько разных языков: SDL, DML и язык администрирования","-Библиотека типовых процедур","-Язык HTML","-Язык Visual Basic for Applications","-Язык Ассемблера"],
+ ex:"SQL (Structured Query Language) содержит всё для работы с БД — от её создания до базового пользовательского интерфейса. Раздельные языки SDL, DML и язык администрирования были в ранних БД."},
+{n:52, t:"p", sample:5, q:"Укажите соответствие SQL-запросов (слева) и результатов их выполнения.",
+ pairs:[["SELECT * FROM Сотрудники","Все записи и все поля таблицы"],["SELECT DISTINCT Должность FROM Сотрудники","Список должностей без повторов"],["SELECT COUNT(*) FROM Сотрудники","Общее число сотрудников"],["SELECT SUM(Зарплата) FROM Сотрудники","Суммарная зарплата всех сотрудников"],["SELECT AVG(Зарплата) FROM Сотрудники","Средняя зарплата"],["SELECT MAX(Зарплата) FROM Сотрудники","Самая высокая зарплата"],["SELECT TOP 3 Фамилия FROM Сотрудники ORDER BY Зарплата DESC","Три сотрудника с наибольшей зарплатой"],["SELECT Фамилия FROM Сотрудники WHERE Зарплата BETWEEN 30000 AND 50000","Сотрудники с зарплатой от 30 000 до 50 000 включительно"],["SELECT Фамилия FROM Сотрудники WHERE Отчество LIKE 'Ни*'","Сотрудники с отчеством на «Ни»"],["SELECT Фамилия FROM Сотрудники WHERE Телефон IS NULL","Сотрудники, у которых не указан телефон"],["SELECT Фамилия FROM Студенты WHERE Оценка IN (4, 5)","Студенты с оценками 4 или 5"],["SELECT Фамилия, Имя FROM Сотрудники ORDER BY Фамилия","Фамилии и имена всех сотрудников по алфавиту"],["SELECT Подразделение, COUNT(*) FROM Сотрудники GROUP BY Подразделение","Число сотрудников в каждом подразделении"],["SELECT Подразделение, COUNT(*) FROM Сотрудники GROUP BY Подразделение HAVING COUNT(*) > 10","Подразделения, где больше 10 сотрудников"]],
+ ex:"При каждой попытке выбираются 5 случайных пар из примеров лекции. DISTINCT убирает повторы, TOP N — первые N записей, BETWEEN включает границы, LIKE — шаблон (* — любые символы), IS NULL — пустое поле, IN — значение из списка, HAVING — условие на группы."},
+{n:53, t:"p", q:"Укажите назначение полей оператора SELECT.",
+ pairs:[["ALL / DISTINCT / TOP N","Исключение избыточной информации (дубликатов)"],["Список полей (или *)","Поля, попадающие в итоговую таблицу"],["FROM","Список таблиц, участвующих в выборке"],["WHERE","Условие (критерий) отбора записей"],["GROUP BY","Объединение повторяющихся значений в группы"],["HAVING","Дополнительные условия на уже сформированные группы"],["ORDER BY","Порядок вывода (сортировка) записей"]],
+ ex:"Синтаксис: SELECT [ALL | DISTINCT] <список полей> FROM <таблицы> [WHERE] [GROUP BY] [HAVING] [ORDER BY]. Обязательно FROM; список полей по умолчанию — *."},
+{n:54, t:"o", q:"Расставьте в нужном порядке (слева направо) поля оператора SELECT.",
+ items:["ALL | DISTINCT","Список полей или *","FROM <список таблиц>","WHERE <условие>","GROUP BY","HAVING","ORDER BY"],
+ ex:"SELECT [ALL | DISTINCT] (1) <список полей> (2) FROM (3) WHERE (4) GROUP BY (5) HAVING (6) ORDER BY (7). В тесте позиций шесть — значит одна часть пропущена; остальные идут в этом же порядке."},
+{n:55, t:"g", g:"fields", tt:"n", q:"Сколько ПОЛЕЙ будет в таблице-результате запроса?"},
+{n:56, t:"g", g:"records", tt:"n", q:"Сколько ЗАПИСЕЙ будет в таблице-результате запроса?"},
+{n:57, t:"m", q:"Укажите поля, которые должны быть обязательно заданы в операторе SELECT:",
+ o:["+FROM (список таблиц)","+Список полей после SELECT (или *)","-WHERE","-GROUP BY","-HAVING","-ORDER BY","-ALL / DISTINCT"],
+ ex:"Минимальный запрос: SELECT <поля или *> FROM <таблицы>. В лекции FROM прямо назван обязательным; список полей по умолчанию *, но без него запрос не записывается. Остальные части необязательны."},
+{n:58, t:"g", g:"names", tt:"m", q:"Укажите НАЗВАНИЯ ПОЛЕЙ таблицы-результата запроса"},
+{n:59, t:"m", q:"Серверные и настольные СУБД — Access, Oracle, IBM DB2, MS SQL Server, MySQL, FireBird, PostgreSQL и т.д. Из них к СУБД с открытым (свободным) кодом относятся:",
+ o:["+MySQL","+PostgreSQL","+FireBird","-Microsoft Access","-Oracle","-IBM DB2","-MS SQL Server","-Visual FoxPro","-Sybase"],
+ ex:"Свободные СУБД (Open Source): MySQL, PostgreSQL, Firebird — около 10,5% рынка, оплачивается только поддержка. Oracle, IBM DB2, MS SQL Server — коммерческие лидеры; Access и Visual FoxPro — коммерческие настольные СУБД Microsoft."},
+{n:60, t:"s", q:"Объектно-ориентированный подход. Множество объектов с одним и тем же набором атрибутов и методов образует …",
+ o:["+Класс","-Домен","-Суперкласс","-Отношение","-Экземпляр","-Инкапсуляцию","-Наследование"],
+ ex:"Класс — множество объектов с одинаковым набором атрибутов и методов. Объект принадлежит только одному классу. Класс, объекты которого служат значениями атрибута другого класса, называется доменом этого атрибута."},
+{n:61, t:"p", q:"Укажите соответствие элементов объектно-ориентированного подхода их характеристикам.",
+ pairs:[["Объект","Моделирует сущность реального мира и получает неизменный уникальный идентификатор"],["Состояние (атрибуты)","Набор значений атрибутов объекта"],["Поведение (методы)","Программный код, оперирующий состоянием объекта"],["Инкапсуляция","Объект — «чёрный ящик»: доступ к данным только через методы"],["Сокрытие данных","Управление областями видимости, защита внутреннего состояния"],["Класс","Множество объектов с одинаковыми атрибутами и методами"],["Наследование","Порождение нового класса на основе существующего"]],
+ ex:"Объект = состояние (атрибуты) + поведение (методы), инкапсулированные вместе; объекты общаются передачей сообщений. Класс объединяет объекты с одинаковыми атрибутами и методами, наследование порождает подкласс от суперкласса."},
+{n:62, t:"p", q:"Укажите соответствие элементов объектно-ориентированной модели (слева) и элементов реляционной модели.",
+ pairs:[["Класс","Таблица"],["Экземпляр","Строка"],["Идентификатор объекта (OID)","ID-столбец в виде первичного ключа"],["Свойство-константа","Столбец"],["Ссылка на хранимый объект","Внешний ключ"],["Встраиваемый объект","Индивидуальные столбцы"],["Индекс","Индекс"]],
+ ex:"Таблица соответствий из лекции 5: класс — таблица, экземпляр — строка, OID — ID-столбец (первичный ключ), свойство-константа — столбец, ссылка на хранимый объект — внешний ключ, встраиваемый объект — индивидуальные столбцы, индекс — индекс."},
+{n:63, t:"m", q:"Наследование — порождение нового класса на основе уже существующего (суперкласса). Укажите его отличительные черты:",
+ o:["+Подкласс наследует все атрибуты и методы суперкласса","+В подклассе могут быть определены дополнительные атрибуты и методы","+Различают простое и множественное наследование","+При простом наследовании у подкласса один суперкласс, классы образуют дерево","+При множественном наследовании суперклассов несколько","+Объект подкласса считается принадлежащим любому суперклассу этого класса","-Подкласс наследует только атрибуты, без методов","-В подклассе нельзя определить новые атрибуты","-Суперкласс наследует атрибуты подкласса","-Наследование возможно только от одного класса","-Наследование — это связь таблиц через внешний ключ"],
+ ex:"Подкласс наследует все атрибуты и методы суперкласса и может добавить свои. Простое наследование — один суперкласс (древовидная иерархия), множественное — несколько суперклассов."},
+{n:64, t:"m", q:"Отметьте способы реализации распределённой БД в локальной компьютерной сети:",
+ o:["+Файловый сервер","+Распределённый файловый сервер","+SQL-сервер","+Распределённый SQL-сервер","+Сервер приложений","?Локальная база данных","-Преобразование БД в статические HTML-документы","-Информационное хранилище для WWW-доступа","-Иерархический сервер","-Терминальный доступ в вычислительном центре"],
+ ex:"Лекция называет 5 способов: файл-сервер, распределённый файл-сервер, SQL-сервер, распределённый SQL-сервер, сервер приложений. На схеме есть ещё «0. Локальная БД» — этот вариант спорный и при проверке не учитывается. Статические документы и хранилище — сценарии WWW-доступа."},
+{n:65, t:"m", q:"Термин «сервер баз данных» используют для обозначения всей БД, основанной на архитектуре «клиент-сервер». Он включает следующие компоненты:",
+ o:["+Представление данных — клиентская часть, интерфейс пользователя с БД","+Приложение — прикладная программа с функциями работы с БД","+Доступ к ресурсам — работа с данными на физическом носителе","-WWW-браузер","-Журнал транзакций","-Маршрутизатор и сетевое оборудование","-Информационное хранилище","-Операционная система клиента"],
+ ex:"Сервер БД = представление данных (интерфейс) + приложение (прикладные функции) + доступ к ресурсам (данные на носителе). Способы реализации отличаются тем, на каком компьютере расположены эти три компонента."},
+{n:66, t:"p", q:"Укажите соответствие способов реализации распределённой БД в локальной сети и их характеристик.",
+ pairs:[["Файловый сервер","Минимальные требования к серверу, но высокий трафик и нагрузка на клиента"],["Распределённый файловый сервер","Часть БД доступна только на локальной машине — меньше нагрузка на сеть"],["SQL-сервер","Клиент и сервер общаются на SQL; самый частый вариант для средних и крупных БД"],["Распределённый SQL-сервер","Часть БД кэшируется на клиенте, затем переносится в основную часть"],["Сервер приложений","Для дорогих (по числу лицензий) и ресурсоёмких прикладных программ"]],
+ ex:"Файл-сервер (Novell NetWare, 1986): сервер почти ничего не делает, программы на клиенте, сеть перегружена. SQL-сервер — стандартный интерфейс SQL. Сервер приложений — когда прикладные программы дорогие и тяжёлые."},
+{n:67, t:"p", q:"Для каждого из трёх сценариев реализации WWW-доступа к БД укажите отличительную характеристику.",
+ pairs:[["Преобразование БД в статические документы","Минимальные начальные расходы; небольшие данные с редким обновлением; нет поиска"],["Динамическое создание документов по запросу","Большие БД со сложной структурой, поиск и частые обновления; но долгая обработка и нагрузка на БД"],["Информационное хранилище","Промежуточная высокопроизводительная БД с периодической загрузкой; лучшая перспектива"]],
+ ex:"Статика — дёшево, но нет поиска и свежих данных. Динамика — поиск и актуальность, но медленно и нагружает основную БД. Информационное хранилище — промежуточная быстрая БД, свободная от недостатков обоих вариантов."},
+{n:68, t:"m", q:"Цель Semantic Web — машинная обработка информации, доступной в Интернете. В основе Semantic Web лежит использование:",
+ o:["+Универсальных идентификаторов ресурсов (URI)","+Онтологий","+Языков описания метаданных (RDF, RDF Schema, OWL)","+Метаданных, однозначно описывающих свойства и содержание ресурсов","-Частотного и лексического анализа текста","-Языка SQL и реляционных таблиц","-Языка HTML для оформления страниц","-Инвертированных списков","-Удалённого вызова процедур (RPC)"],
+ ex:"Semantic Web (Тим Бернерс-Ли) — переход от документов, читаемых компьютером, к документам, понимаемым компьютером. Основа — URI для всех ресурсов, онтологии и языки метаданных. Частотный и лексический анализ текста — нынешний подход, от которого предлагают уйти."},
+{n:69, t:"o", q:"Расставьте первые четыре уровня архитектуры Semantic Web (от простого к сложному).",
+ items:["URI и Unicode","XML и XML Schema","RDF и RDF Schema","OWL (онтологии)"],
+ ex:"Уровни по росту абстракции: 1) URI и Unicode — адресация объектов; 2) XML — синтаксис структуры документа; 3) RDF — тройки «субъект–отношение–объект»; 4) OWL — онтологии. Выше: логика, доказательство (Proof), доверие (Trust)."},
+{n:70, t:"s", q:"К какой нереляционной модели данных относится понятие «многомерная база данных»?",
+ o:["+Постреляционная модель","-Объектно-ориентированная","-Иерархическая","-Сетевая","-NoSQL «ключ–значение»","-Документо-ориентированная","-Графовая"],
+ ex:"Постреляционная модель — расширенная реляционная, в которой отменено требование атомарности: в полях можно хранить другие таблицы. Поэтому её называют «многомерной базой данных». Пример — PostgreSQL."}
+];
+
+/* ---------- Утилиты ---------- */
+const rnd = n => Math.floor(Math.random() * n);
+const range = n => Array.from({length:n}, (_, i) => i);
+function shuffle(a){ a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const uniq = a => Array.from(new Set(a));
+const norm = s => String(s).toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9]+/g, " ").trim();
+function parseOpts(a){ return a.map(s => ({t:s.slice(1), ok: s[0] === "+" ? true : (s[0] === "?" ? "maybe" : false)})); }
+function plural(n, one, few, many){ const m10 = n % 10, m100 = n % 100; if(m10 === 1 && m100 !== 11) return one; if(m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few; return many; }
+
+/* ---------- Генераторы вопросов с данными ---------- */
+const SURN = ["Иванов","Петров","Сидоров","Фёдоров","Смирнов","Кузнецов","Попов","Волков","Соколов","Лебедев","Козлов","Новиков","Морозов","Орлов"];
+function genAB(op){
+  const names = shuffle(SURN).slice(0, 12);
+  const nA = 4 + rnd(3), nB = 3 + rnd(4);
+  const k = 1 + rnd(Math.min(nA, nB) - 1);
+  const common = names.slice(0, k), onlyA = names.slice(k, nA), onlyB = names.slice(nA, nA + nB - k);
+  const num = {}; names.forEach((s, i) => { num[s] = 2931 + i; });
+  const A = shuffle(common.concat(onlyA)).map(s => [num[s], s]);
+  const B = shuffle(common.concat(onlyB)).map(s => [num[s], s]);
+  const opName = {union:"ОБЪЕДИНЕНИЯ (A ∪ B)", inter:"ПЕРЕСЕЧЕНИЯ (A ∩ B)", minus:"ВЫЧИТАНИЯ (A − B)"}[op];
+  const cs = common.join(", ");
+  let ans, ex;
+  if(op === "union"){ ans = nA + nB - k; ex = `Общие записи (есть в обеих таблицах): ${cs} — их ${k}. Объединение включает каждую запись один раз: ${nA} + ${nB} − ${k} = ${ans}.`; }
+  else if(op === "inter"){ ans = k; ex = `Пересечение — записи, которые есть и в A, и в B: ${cs}. Итого ${k}.`; }
+  else { ans = nA - k; ex = `A − B — записи A, которых нет в B: ${onlyA.join(", ")}. Итого ${nA} − ${k} = ${ans}.`; }
+  ex += " Правило: объединение = |A| + |B| − общие; пересечение = общие; разность A − B = |A| − общие. Данные меняются при каждой попытке.";
+  return {t:"n", q:`Таблицы A и B имеют одинаковую структуру (совместимы по объединению). При выполнении операции ${opName} получится таблица C. Сколько в ней записей?`, ans, ex, extra:{kind:"ab", A, B}};
+}
+const FIELDS = [
+  {sql:"SELECT *\nFROM Сотрудники", c:8, w:"Звёздочка * означает все поля таблицы — их 8."},
+  {sql:"SELECT Фамилия, Имя, Отчество\nFROM Сотрудники\nWHERE Должность = 'Профессор'", c:3, w:"После SELECT три поля. Поле из WHERE в результат не попадает."},
+  {sql:"SELECT DISTINCT Должность\nFROM Сотрудники", c:1, w:"Одно поле — Должность. DISTINCT влияет на число записей, а не полей."},
+  {sql:"SELECT Подразделение, COUNT(*), MAX(Зарплата), SUM(Зарплата)\nFROM Сотрудники\nGROUP BY Подразделение", c:4, w:"Подразделение и три агрегатные функции — 4 поля. Каждая функция даёт отдельное поле."},
+  {sql:"SELECT TOP 3 Фамилия, Зарплата\nFROM Сотрудники\nORDER BY Зарплата DESC", c:2, w:"Два поля: Фамилия и Зарплата. TOP 3 ограничивает число записей, а не полей."},
+  {sql:"SELECT SUM(Зарплата) AS Фонд_оплаты\nFROM Сотрудники", c:1, w:"Одно вычисляемое поле Фонд_оплаты. AS меняет только имя поля."},
+  {sql:"SELECT Фамилия, Должность, Зарплата, Зарплата * 12 AS Годовой_доход\nFROM Сотрудники", c:4, w:"Три поля таблицы и одно вычисляемое — 4."},
+  {sql:"SELECT MIN(Дата_рождения), MAX(Дата_рождения)\nFROM Сотрудники\nWHERE Должность = 'Профессор'", c:2, w:"Две агрегатные функции — два поля."},
+  {sql:"SELECT Сотрудники.Фамилия, Сотрудники.Должность\nFROM Сотрудники\nORDER BY Фамилия", c:2, w:"Два поля; запись Таблица.Поле — просто поле этой таблицы. ORDER BY полей не добавляет."}
+];
+function genFields(){
+  const f = FIELDS[rnd(FIELDS.length)];
+  return {t:"n", q:"Сколько ПОЛЕЙ будет содержать таблица-результат запроса?", ans:f.c,
+    ex:f.w + " Правило: число полей = число элементов в списке после SELECT; * — все поля таблицы.",
+    extra:{kind:"sql", schema:"Сотрудники (Таб_номер, Фамилия, Имя, Отчество, Должность, Подразделение, Зарплата, Дата_рождения) — 8 полей", sql:f.sql}};
+}
+const EMP = [
+  ["Иванов","Профессор","Кафедра ТОИ",62000],["Петров","Доцент","Кафедра ТОИ",48000],["Сидоров","Ассистент","Кафедра ТОИ",35000],
+  ["Фёдорова","Доцент","Кафедра ИТ",50000],["Смирнов","Профессор","Кафедра ИТ",65000],["Кузнецова","Ассистент","Деканат",30000],
+  ["Попов","Доцент","Деканат",45000],["Волкова","Доцент","Кафедра ИТ",47000],["Соколова","Ассистент","Кафедра ИТ",33000],["Лебедев","Доцент","Кафедра ТОИ",52000]
+];
+function pickRows(r, pred, what){ const m = r.filter(pred).map(x => x[0]); return {c:m.length, w:`Условие: ${what}. Подходят: ${m.length ? m.join(", ") : "никто"} — ${m.length}.`}; }
+const RECQ = [
+  {sql:"SELECT *\nFROM Сотрудники", f:r => ({c:r.length, w:"Без условия WHERE в результат попадают все записи таблицы."})},
+  {sql:"SELECT COUNT(*) AS Всего\nFROM Сотрудники", f:() => ({c:1, w:"Агрегатная функция без GROUP BY сворачивает всю таблицу в одну запись."})},
+  {sql:"SELECT DISTINCT Должность\nFROM Сотрудники", f:r => { const d = uniq(r.map(x => x[1])); return {c:d.length, w:`DISTINCT оставляет только разные значения: ${d.join(", ")}.`}; }},
+  {sql:"SELECT TOP 3 Фамилия, Зарплата\nFROM Сотрудники\nORDER BY Зарплата DESC", f:() => ({c:3, w:"TOP 3 выводит ровно три первые записи после сортировки."})},
+  {sql:"SELECT Фамилия\nFROM Сотрудники\nWHERE Подразделение = 'Кафедра ТОИ'", f:r => pickRows(r, x => x[2] === "Кафедра ТОИ", "подразделение — «Кафедра ТОИ»")},
+  {sql:"SELECT Фамилия\nFROM Сотрудники\nWHERE Должность = 'Доцент' AND Зарплата > 46000", f:r => pickRows(r, x => x[1] === "Доцент" && x[3] > 46000, "доценты с зарплатой больше 46 000")},
+  {sql:"SELECT Фамилия\nFROM Сотрудники\nWHERE Зарплата BETWEEN 35000 AND 50000", f:r => pickRows(r, x => x[3] >= 35000 && x[3] <= 50000, "зарплата от 35 000 до 50 000, границы включаются")},
+  {sql:"SELECT Подразделение, SUM(Зарплата)\nFROM Сотрудники\nGROUP BY Подразделение", f:r => { const d = uniq(r.map(x => x[2])); return {c:d.length, w:`GROUP BY даёт одну запись на группу. Подразделения: ${d.join(", ")}.`}; }},
+  {sql:"SELECT Должность, COUNT(*)\nFROM Сотрудники\nGROUP BY Должность\nHAVING COUNT(*) > 2", f:r => { const m = {}; r.forEach(x => { m[x[1]] = (m[x[1]] || 0) + 1; }); const parts = Object.entries(m).map(([k, v]) => `${k} — ${v}`); const g = Object.entries(m).filter(([, v]) => v > 2).map(([k]) => k); return {c:g.length, w:`Группы по должностям: ${parts.join(", ")}. HAVING оставляет группы, где больше двух записей${g.length ? ": " + g.join(", ") : " — таких нет"}.`}; }},
+  {sql:"SELECT Фамилия\nFROM Сотрудники\nWHERE Должность IN ('Профессор', 'Ассистент')", f:r => pickRows(r, x => x[1] === "Профессор" || x[1] === "Ассистент", "должность из списка: профессор или ассистент")},
+  {sql:"SELECT Фамилия\nFROM Сотрудники\nWHERE Фамилия LIKE 'С*'", f:r => pickRows(r, x => x[0].startsWith("С"), "фамилия начинается на «С» (* — любые символы)")},
+  {sql:"SELECT AVG(Зарплата) AS Средняя\nFROM Сотрудники\nWHERE Подразделение = 'Деканат'", f:() => ({c:1, w:"AVG без GROUP BY возвращает одну запись — среднее значение."})}
+];
+function genRecords(){
+  const n = 7 + rnd(3);
+  const rows = shuffle(range(EMP.length)).slice(0, n).sort((a, b) => a - b).map(i => EMP[i]);
+  const qq = RECQ[rnd(RECQ.length)], r = qq.f(rows);
+  return {t:"n", q:`В таблице «Сотрудники» ${n} записей. Сколько ЗАПИСЕЙ будет содержать таблица-результат запроса?`, ans:r.c,
+    ex:r.w + " Правило: WHERE и HAVING уменьшают число записей; агрегат без GROUP BY даёт одну запись; GROUP BY — по записи на группу; TOP N — N записей; ORDER BY число записей не меняет.",
+    extra:{kind:"emp", rows, sql:qq.sql}};
+}
+const NAMES = [
+  {sql:"SELECT Фамилия, Должность, SUM(Сумма) AS Итого\nFROM Выплаты\nWHERE Подразделение = 'Кафедра ТОИ'\nGROUP BY Фамилия, Должность\nORDER BY Фамилия", o:["+Фамилия","+Должность","+Итого","-Сумма","-Подразделение","-Выплаты","-SUM"], w:"В результат попадают поля из списка SELECT: Фамилия, Должность и вычисляемое поле, названное через AS «Итого». Сумма и Подразделение только участвуют в расчёте и отборе."},
+  {sql:"SELECT Сотрудники.Фамилия, Отделы.Название AS Отдел\nFROM Сотрудники, Отделы\nWHERE Сотрудники.Отдел_номер = Отделы.Номер", o:["+Фамилия","+Отдел","-Название","-Отдел_номер","-Номер","-Сотрудники","-Отделы"], w:"Поле Отделы.Название переименовано через AS в «Отдел», поэтому старого имени в результате нет. Поля из условия соединения в результат не попадают."},
+  {sql:"SELECT COUNT(*) AS Общее_число_сотрудников, AVG(Зарплата) AS Средняя_зарплата\nFROM Сотрудники\nWHERE Должность = 'Доцент'", o:["+Общее_число_сотрудников","+Средняя_зарплата","-Зарплата","-Должность","-COUNT","-Сотрудники"], w:"Оба поля вычисляемые и названы через AS. Зарплата и Должность только участвуют в расчёте и условии."},
+  {sql:"SELECT DISTINCT Должность, Подразделение\nFROM Сотрудники\nORDER BY Должность", o:["+Должность","+Подразделение","-Фамилия","-Зарплата","-DISTINCT","-Сотрудники"], w:"Поля результата — те, что после SELECT DISTINCT: Должность и Подразделение. DISTINCT — служебное слово, Сотрудники — имя таблицы."}
+];
+function genNames(){
+  const v = NAMES[rnd(NAMES.length)];
+  return {t:"m", q:"Укажите НАЗВАНИЯ ПОЛЕЙ таблицы-результата запроса.", o:parseOpts(v.o),
+    ex:v.w + " Правило: названия полей результата — это поля из списка после SELECT, а для полей с AS — новое имя.", extra:{kind:"sql", sql:v.sql}};
+}
+const GEN = {union:() => genAB("union"), inter:() => genAB("inter"), minus:() => genAB("minus"), fields:genFields, records:genRecords, names:genNames};
+
+/* ---------- Второй вариант ответа: из файла «Редька тест БД» ---------- */
+const ALT = {
+4:{note:"В файле к слабоструктурированным данным прямо отнесены XML, EDI и email. В лекции таких примеров нет, поэтому в варианте Claude их не было.",
+ o:["+XML-документы","+EDI-сообщения","+Электронная почта (email)","+Тексты и документы","+Графика","+Мультимедиа: видео, речь, аудио","+Тексты программ и объектные модули","-Таблицы реляционной БД","-Файлы CSV","-Файлы Excel с чёткими столбцами и типами данных","-Колоночные форматы Apache Parquet, ORC"],
+ ex:"Ответ из файла: слабоструктурированные — XML, EDI, email; неструктурированные — тексты, графика, мультимедиа, документы, тексты программ, объектные модули. Таблицы, CSV, Excel и Parquet в файле отнесены к структурированным."},
+5:{note:"В файле структурированные данные даны примерами: таблицы реляционных БД, CSV, Excel, Parquet. В лекции из этих примеров есть только таблицы; там названы три типа структур — линейные, табличные, иерархические.",
+ o:["+Таблицы реляционных БД (MySQL, PostgreSQL)","+Файлы CSV","+Файлы Excel с чёткими столбцами и типами данных","+Колоночные форматы Apache Parquet, ORC","-XML-документы","-Электронная почта","-Видео и аудио","-Тексты документов","-Графика"],
+ ex:"Ответ из файла: структурированные — данные, упорядоченные и организованные для применения к ним действий: таблицы реляционных БД, CSV, Excel с чёткими столбцами, колоночные форматы Parquet и ORC."},
+10:{note:"В файле нет «моделирования», зато после Data Mining стоят хранилища и витрины данных — так в итоговом списке лекции. В варианте Claude взят основной текст лекции, где моделирование — отдельный метод перед OLAP.",
+ items:["Простые запросы и отчёты","Стандарты организации производства, автоматизация отчётности (MRP, ERP)","OLAP, визуализация","Data Mining","Хранилища и витрины данных","Business Intelligence"],
+ ex:"Ответ из файла повторяет итоговый список лекции: 1960–80-е — простые запросы и отчёты; 1980-е — стандарты и автоматизация отчётности; середина 1990-х — OLAP; конец 1990-х — Data Mining; затем хранилища и витрины данных; сейчас — Business Intelligence."},
+21:{note:"В файле ответ — список элементов структурной составляющей реляционной модели из лекции. В варианте Claude — состав самого отношения: заголовок и тело, атрибуты и кортежи.",
+ o:["+Тип данных","+Домен","+Отношение","+Атрибут","+Кортеж","+Схема отношения","+Схема БД","-Формы и отчёты","-Макросы","-Указатели на другие записи","-Вложенная таблица в поле","-Транзакции"],
+ ex:"Ответ из файла: «К элементам структурной составляющей реляционных БД относятся: тип данных, домен, отношение, атрибут, кортеж, схема отношения и схема БД»."},
+26:{note:"В файле ответ — «один из атрибутов». В лекции первичный ключ — набор атрибутов, а на практике чаще всего один атрибут. Если в тесте есть вариант «набор атрибутов», вариант Claude точнее.",
+ o:["+Один из атрибутов отношения БД","-Только числовое поле","-Любое поле, даже с повторяющимися значениями","-Внешний ключ","-Порядковый номер строки в файле","-Индекс таблицы"],
+ ex:"Ответ из файла: для первичного ключа используется один из атрибутов отношения. Лекция: на практике первичный ключ чаще всего — один столбец (табельный номер, ИНН)."},
+54:{note:"В файле первым стоит SELECT, а список полей пропущен. В варианте Claude нумерация как в лекции: поле 1 — ALL | DISTINCT, поле 2 — список полей, поле 3 — FROM (в вопросе FROM тоже третий).",
+ items:["SELECT","ALL | DISTINCT","FROM","WHERE","GROUP BY","HAVING","ORDER BY"],
+ ex:"Ответ из файла: SELECT → ALL | DISTINCT → FROM → WHERE → GROUP BY → HAVING → ORDER BY."},
+57:{note:"В файле обязательным назван только FROM — так написано в лекции. В варианте Claude добавлен список полей: вопрос с несколькими ответами, и без списка полей запрос не записывается.",
+ o:["+FROM (список таблиц)","-Список полей после SELECT (или *)","-WHERE","-GROUP BY","-HAVING","-ORDER BY","-ALL / DISTINCT"],
+ ex:"Ответ из файла: обязательно только FROM. В лекции: «FROM – список таблиц, участвующих в выборке (обязательное поле)», остальные части помечены как необязательные."},
+70:{note:"В файле ответ — NoSQL. В лекции 5 сказано: «постреляционную модель называют многомерной базой данных», поэтому в варианте Claude ответ — постреляционная модель.",
+ o:["+NoSQL","-Постреляционная модель","-Объектно-ориентированная","-Иерархическая","-Сетевая","-Реляционная"],
+ ex:"Ответ из файла: NoSQL. Обратите внимание: в лекции «многомерной базой данных» прямо названа постреляционная модель."}
+};
+
+/* ---------- Подготовка данных ---------- */
+const QM = {};
+Q.forEach(q => {
+  q.sec = SECT.findIndex(s => s && q.n >= s.from && q.n <= s.to);
+  if(q.o) q.o = parseOpts(q.o);
+  if(ALT[q.n]){
+    const a = ALT[q.n];
+    q.altNote = a.note;
+    q.alt = {ex:a.ex};
+    if(a.o) q.alt.o = parseOpts(a.o);
+    if(a.items) q.alt.items = a.items;
+    q.altFull = Object.assign({}, q, q.alt);
+  }
+  QM[q.n] = q;
+});
+let VARPREF = {};
+function itOf(q, st){ return st.inst || (st.variant === "file" ? q.altFull : q); }
+function answerText(it){
+  if(it.t === "o") return it.items.map((s, i) => `${i + 1}) ${s}`).join("   ");
+  if(it.o) return it.o.filter(o => o.ok === true).map(o => o.t).join("; ");
+  return String(it.ans || "");
+}
+const ALL = Q.map(q => q.n);
+const typeOf = q => q.t === "g" ? q.tt : q.t;
+
+/* ---------- Логика ответа ---------- */
+function prepare(q, variant){
+  const inst = q.t === "g" ? GEN[q.g]() : null;
+  const v = q.alt ? (variant || VARPREF[q.n] || "file") : null;
+  const it = inst || (v === "file" ? q.altFull : q);
+  const st = {inst, variant:v, done:false, ok:false, gave:false};
+  if(it.t === "s"){ st.ord = shuffle(range(it.o.length)); st.sel = null; }
+  else if(it.t === "m"){ st.ord = shuffle(range(it.o.length)); st.sel = []; }
+  else if(it.t === "o"){ let p = shuffle(range(it.items.length)); if(p.every((v, i) => v === i)) p = p.reverse(); st.pool = p; st.sel = []; }
+  else if(it.t === "p"){
+    let idx = range(it.pairs.length);
+    if(it.sample && it.sample < idx.length) idx = shuffle(idx).slice(0, it.sample);
+    st.left = shuffle(idx); st.right = shuffle(idx); st.sel = st.left.map(() => null);
+  }
+  else { st.sel = ""; }
+  return st;
+}
+function complete(it, st){
+  switch(it.t){
+    case "s": return st.sel !== null && st.sel !== undefined;
+    case "m": return st.sel.length > 0;
+    case "o": return st.sel.length === it.items.length;
+    case "p": return st.sel.every(v => v !== null && v !== undefined);
+    default: return String(st.sel).trim() !== "";
+  }
+}
+function grade(it, st){
+  switch(it.t){
+    case "s": return it.o[st.sel].ok === true;
+    case "m": return it.o.every((o, i) => o.ok === "maybe" || ((o.ok === true) === st.sel.includes(i)));
+    case "o": return st.sel.every((v, i) => v === i);
+    case "p": return st.left.every((li, i) => st.right[st.sel[i]] === li);
+    case "x": { const v = norm(st.sel).replace(/ /g, ""); return v.length > 2 && it.acc.some(a => v.includes(a)); }
+    case "n": { const v = Number(String(st.sel).replace(",", ".").trim()); return v === it.ans; }
+  }
+  return false;
+}
+</script>
+<script>
+"use strict";
+/* ---------- Состояние ---------- */
+const KEY = "bdis-trainer-v1";
+const reduceMotion = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let prog = {status:{}};
+let round = null, roundNo = 0;
+let view = "test", back = "test", viewN = 1;
+let listFilter = "all", listQ = "";
+let menuConfirm = false;
+const browseSt = {};
+const $ = s => document.querySelector(s);
+
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  if(attrs) for(const k in attrs){
+    const v = attrs[k];
+    if(v === null || v === undefined || v === false) continue;
+    if(k === "class") el.className = v;
+    else if(k.slice(0, 2) === "on") el.addEventListener(k.slice(2), v);
+    else if(k === "value") el.value = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for(const kid of kids.flat()){
+    if(kid === null || kid === undefined || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+let savedAt = 0;
+const remote = {ref:null, writing:false, dirty:false, timer:null, mode:"local"};
+function snapshotState(){ return {v:DATA_V, status:prog.status, round, roundNo, varPref:VARPREF, savedAt}; }
+function save(){
+  savedAt = Date.now();
+  try{ localStorage.setItem(KEY, JSON.stringify(snapshotState())); }catch(e){}
+  queueRemote();
+}
+function queueRemote(){
+  if(!remote.ref) return;
+  remote.dirty = true; clearTimeout(remote.timer);
+  remote.timer = setTimeout(flushRemote, 1500);
+}
+async function flushRemote(){
+  if(!remote.ref || remote.writing || !remote.dirty) return;
+  clearTimeout(remote.timer);
+  remote.writing = true; remote.dirty = false;
+  try{ await remote.ref.set({json:JSON.stringify(snapshotState()), savedAt}); }
+  catch(e){
+    const code = e && e.code;
+    if(["invalid_argument","not_granted","revoked","capability_disabled","capability_removed"].includes(code)){ remote.ref = null; remote.mode = "local"; updateSyncNote(); }
+    else remote.dirty = true;
+  }
+  finally{
+    remote.writing = false;
+    if(remote.dirty && remote.ref) remote.timer = setTimeout(flushRemote, 3000);
+  }
+}
+function updateSyncNote(){
+  const el = document.getElementById("sync");
+  if(!el) return;
+  el.textContent = remote.mode === "account"
+    ? "Прогресс сохраняется в вашем аккаунте Claude и доступен с любого устройства"
+    : "Прогресс сохраняется в этом браузере";
+}
+function validRound(saved){
+  const r = saved && saved.round;
+  return !!(saved && saved.v === DATA_V && r && Array.isArray(r.queue) && r.queue.length && r.queue.every(n => QM[n]) && typeof r.idx === "number");
+}
+function applyState(saved){
+  if(saved && saved.status && typeof saved.status === "object") prog.status = saved.status;
+  if(saved && saved.varPref && typeof saved.varPref === "object"){ for(const k in VARPREF) delete VARPREF[k]; Object.assign(VARPREF, saved.varPref); }
+  if(validRound(saved)){
+    round = saved.round; round.res = round.res && typeof round.res === "object" ? round.res : {};
+    roundNo = saved.roundNo || round.no || 1;
+  }
+  savedAt = (saved && saved.savedAt) || 0;
+}
+async function initRemote(){
+  try{
+    let tries = 0;
+    while(!(window.claude && typeof window.claude.use === "function") && tries < 15){ await new Promise(r => setTimeout(r, 200)); tries++; }
+    if(!(window.claude && typeof window.claude.use === "function")) return;
+    const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+    if(!db || !user) return;
+    const id = await user.id();
+    if(!id) return;
+    const ref = db.doc("data/users/" + id + "/progress");
+    const snap = await Promise.race([ref.get(), new Promise((_, rej) => setTimeout(() => rej({code:"timeout"}), 10000))]);
+    remote.ref = ref; remote.mode = "account";
+    let st = null;
+    if(snap.exists){ try{ st = JSON.parse(snap.data().json); }catch(e){ st = null; } }
+    const remoteAt = (st && st.savedAt) || 0;
+    if(st && remoteAt > savedAt){
+      Object.keys(browseSt).forEach(k => delete browseSt[k]);
+      applyState(st);
+      try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){}
+      view = round.idx >= round.queue.length ? "summary" : "test";
+      rerender();
+    } else if(savedAt > remoteAt){ remote.dirty = true; flushRemote(); }
+    updateSyncNote();
+  }catch(e){ remote.ref = null; remote.mode = "local"; updateSyncNote(); }
+}
+function load(){ try{ const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+function toTop(){ try{ window.scrollTo({top:0, behavior:"auto"}); }catch(e){ window.scrollTo(0, 0); } }
+
+/* ---------- Круги ---------- */
+function makeRound(kind, queue, name, sql){ roundNo += 1; return {no:roundNo, kind, name, sql, queue, idx:0, res:{}}; }
+function startRound(kind, queue, name, sql){
+  round = makeRound(kind, queue, name, sql);
+  view = "test"; menuConfirm = false;
+  save(); rerender(); toTop();
+}
+function getSt(n){ if(!round.res[n]) round.res[n] = prepare(QM[n]); return round.res[n]; }
+function counts(){
+  let ok = 0, bad = 0;
+  for(const n of round.queue){ const s = round.res[n]; if(s && s.done){ if(s.ok) ok++; else bad++; } }
+  return {ok, bad, left:round.queue.length - ok - bad};
+}
+function statusCounts(){
+  let ok = 0, bad = 0;
+  for(const n of ALL){ if(prog.status[n] === "ok") ok++; else if(prog.status[n] === "bad") bad++; }
+  return {ok, bad, none:ALL.length - ok - bad};
+}
+function sectionQueue(k){ const s = SECT[k]; return ALL.filter(n => n >= s.from && n <= s.to); }
+
+/* ---------- Действия ---------- */
+function switchVar(q, mode, v){
+  VARPREF[q.n] = v;
+  const ns = prepare(q, v);
+  if(mode === "round") round.res[q.n] = ns; else browseSt[q.n] = ns;
+  save(); rerender();
+}
+function doCheck(q, st, mode){
+  const it = itOf(q, st);
+  if(st.done || !complete(it, st)) return;
+  st.ok = grade(it, st); st.done = true;
+  prog.status[q.n] = st.ok ? "ok" : "bad";
+  save(); rerender(); afterAnswer(mode);
+}
+function doGiveUp(q, st, mode){
+  if(st.done) return;
+  st.done = true; st.ok = false; st.gave = true;
+  if(mode === "round") prog.status[q.n] = "bad";
+  save(); rerender(); afterAnswer(mode);
+}
+function afterAnswer(mode){
+  const sec = mode === "round" ? "#v-test" : "#v-view";
+  const fb = document.querySelector(sec + " .fb");
+  if(fb) fb.scrollIntoView({block:"nearest", behavior:reduceMotion ? "auto" : "smooth"});
+  const nx = document.querySelector(sec + " .btn-next");
+  if(nx) nx.focus({preventScroll:true});
+}
+function goNext(){
+  round.idx += 1;
+  if(round.idx >= round.queue.length){ round.idx = round.queue.length; view = "summary"; }
+  save(); rerender(); toTop();
+}
+function goTo(i){ round.idx = i; view = "test"; save(); rerender(); toTop(); }
+function openView(n){
+  if(view === "test" || view === "summary") back = view;
+  viewN = n; view = "view"; rerender(); toTop();
+}
+function openList(){
+  if(view === "test" || view === "summary") back = view;
+  view = "list"; rerender(); toTop();
+}
+function openMenu(){
+  if(view === "test" || view === "summary") back = view;
+  view = "menu"; menuConfirm = false; rerender(); toTop();
+}
+function returnBack(){ view = back; rerender(); toTop(); }
+const backLabel = () => back === "summary" ? "← Вернуться к итогам круга" : "← Вернуться к тесту";
+
+/* ---------- Карточка вопроса ---------- */
+function renderExtra(x){
+  const tbl = (cap, head, rows) => h("div", {class:"tbl-wrap"},
+    h("table", {class:"data"}, h("caption", null, cap),
+      h("thead", null, h("tr", null, head.map(c => h("th", {scope:"col"}, c)))),
+      h("tbody", null, rows.map(r => h("tr", null, r.map(c => h("td", null, String(c))))))));
+  if(x.kind === "ab") return h("div", {class:"tables"}, tbl("Таблица A", ["Таб. №", "Фамилия"], x.A), tbl("Таблица B", ["Таб. №", "Фамилия"], x.B));
+  if(x.kind === "sql") return h("div", {class:"extra"}, x.schema ? h("p", {class:"schema"}, x.schema) : null, h("pre", {class:"sql"}, x.sql));
+  if(x.kind === "emp") return h("div", {class:"extra"},
+    tbl("Сотрудники", ["Фамилия", "Должность", "Подразделение", "Зарплата"], x.rows.map(r => [r[0], r[1], r[2], r[3].toLocaleString("ru-RU")])),
+    h("pre", {class:"sql"}, x.sql));
+  return null;
+}
+function renderChoice(it, st){
+  const single = it.t === "s";
+  const list = h("div", {class:"opts" + (single ? " single" : ""), role:single ? "radiogroup" : "group"});
+  st.ord.forEach(i => {
+    const o = it.o[i];
+    const sel = single ? st.sel === i : st.sel.includes(i);
+    let cls = "opt" + (sel && !st.done ? " sel" : ""), tag = null;
+    if(st.done){
+      if(o.ok === true && sel) cls += " good";
+      else if(o.ok === true){ cls += single ? " good" : " missed"; tag = single ? "верный ответ" : "нужно было отметить"; }
+      else if(o.ok === false && sel){ cls += " wrong"; tag = single ? "ваш ответ" : "лишний вариант"; }
+      else if(o.ok === "maybe"){ cls += " maybe"; tag = "спорный вариант, при проверке не учитывается"; }
+      else cls += " dim";
+    }
+    list.append(h("button", {class:cls, type:"button", role:single ? "radio" : "checkbox", "aria-checked":String(sel), disabled:st.done || null,
+      onclick:() => { if(single) st.sel = i; else st.sel = sel ? st.sel.filter(x => x !== i) : st.sel.concat(i); rerender(); }},
+      h("span", {class:"box", "aria-hidden":"true"}), h("span", null, o.t), tag ? h("span", {class:"opt-tag"}, tag) : null));
+  });
+  return list;
+}
+function renderOrder(it, st){
+  const wrap = h("div", {class:"ord"});
+  const ans = h("ol", {class:"ord-ans"});
+  st.sel.forEach((itemIdx, pos) => {
+    let cls = "ord-item";
+    if(st.done) cls += itemIdx === pos ? " good" : " wrong";
+    ans.append(h("li", null, h("button", {class:cls, type:"button", disabled:st.done || null, "aria-label":`Убрать: ${it.items[itemIdx]}`,
+      onclick:() => { st.sel.splice(pos, 1); rerender(); }},
+      h("span", {class:"ord-n"}, pos + 1), h("span", null, it.items[itemIdx]))));
+  });
+  if(!st.sel.length) ans.append(h("li", {class:"ord-empty"}, "Здесь появится ваш порядок"));
+  wrap.append(h("div", {class:"blabel"}, "Ваш порядок"), ans);
+  const rest = st.pool.filter(i => !st.sel.includes(i));
+  if(!st.done && rest.length){
+    const pool = h("div", {class:"ord-pool"});
+    rest.forEach(i => pool.append(h("button", {class:"chip-opt", type:"button", onclick:() => { st.sel.push(i); rerender(); }}, it.items[i])));
+    wrap.append(h("div", {class:"blabel"}, "Варианты"), pool);
+  }
+  return wrap;
+}
+function renderMatch(it, st){
+  const wrap = h("div", {class:"ord"});
+  const legend = h("ol", {class:"legend"});
+  st.right.forEach((pi, k) => legend.append(h("li", null, h("span", {class:"let"}, LET[k]), h("span", null, it.pairs[pi][1]))));
+  const rows = h("div", {class:"match"});
+  st.left.forEach((li, i) => {
+    const chosen = st.sel[i], correctK = st.right.indexOf(li);
+    let cls = "mrow";
+    if(st.done) cls += chosen === correctK ? " good" : " wrong";
+    const chips = h("div", {class:"lets", role:"radiogroup", "aria-label":it.pairs[li][0]});
+    st.right.forEach((pi, k) => chips.append(h("button", {type:"button",
+      class:"letbtn" + (chosen === k ? " sel" : "") + (st.done && k === correctK && chosen !== k ? " right" : ""),
+      role:"radio", "aria-checked":String(chosen === k), disabled:st.done || null,
+      onclick:() => { st.sel[i] = k; rerender(); }}, LET[k])));
+    rows.append(h("div", {class:cls},
+      h("div", {class:"mleft"}, it.pairs[li][0], st.done && chosen !== correctK ? h("span", {class:"mfix"}, "верно: " + LET[correctK]) : null),
+      chips));
+  });
+  wrap.append(h("div", {class:"blabel"}, "Варианты"), legend, h("div", {class:"blabel"}, "Сопоставьте"), rows);
+  return wrap;
+}
+function renderInput(q, it, st, mode){
+  const inp = h("input", {class:"inp", id:`ans-${mode}-${q.n}`, type:"text", inputmode:it.t === "n" ? "numeric" : null,
+    autocomplete:"off", spellcheck:"false", value:st.sel, disabled:st.done || null, "aria-label":"Ваш ответ",
+    placeholder:it.t === "n" ? "Число" : "Ваш ответ"});
+  inp.addEventListener("input", () => {
+    st.sel = inp.value;
+    const b = inp.closest(".card").querySelector(".btn-check");
+    if(b) b.disabled = !complete(it, st);
+  });
+  inp.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); if(complete(it, st)) doCheck(q, st, mode); } });
+  return inp;
+}
+function renderFeedback(q, it, st){
+  const box = h("div", {class:"fb", role:"status"});
+  box.append(h("div", {class:"fb-v"}, st.gave ? "Правильный ответ" : (st.ok ? "Верно" : "Неверно")));
+  if(q.alt) box.append(h("p", {class:"var-src"}, st.variant === "file" ? "Проверено по варианту из файла «Редька тест БД»." : "Проверено по варианту, который составил Claude по лекциям."));
+  if(it.t === "o"){
+    const ol = h("ol", {class:"fb-list"}); it.items.forEach(s => ol.append(h("li", null, s)));
+    box.append(h("div", {class:"fb-h"}, "Правильный порядок"), ol);
+  }
+  if(it.t === "p"){
+    const g = h("div", {class:"fb-pairs"});
+    st.left.forEach(li => g.append(h("div", {class:"fb-pair"}, h("span", {class:"l"}, it.pairs[li][0]), h("span", {class:"arrow"}, "→"), h("span", null, it.pairs[li][1]))));
+    box.append(h("div", {class:"fb-h"}, "Правильные пары"), g);
+  }
+  if(it.t === "x" || it.t === "n") box.append(h("div", {class:"fb-h"}, "Ответ"), h("p", {class:"fb-ans"}, String(it.ans)));
+  box.append(h("div", {class:"fb-h"}, "Пояснение"), h("p", {class:"fb-ex"}, it.ex));
+  if(q.alt){
+    const other = st.variant === "file" ? q : q.altFull;
+    box.append(h("div", {class:"fb-h"}, st.variant === "file" ? "Ответ в варианте Claude (по лекциям)" : "Ответ в варианте из файла «Редька тест БД»"),
+      h("p", {class:"fb-ex"}, answerText(other)),
+      h("div", {class:"fb-h"}, "Почему варианты расходятся"), h("p", {class:"fb-ex"}, q.altNote));
+  }
+  return box;
+}
+function renderCard(q, st, mode){
+  const it = itOf(q, st);
+  const card = h("article", {class:"card" + (st.done && !st.gave ? (st.ok ? " is-ok" : " is-bad") : (st.done ? " is-bad" : ""))});
+  card.append(h("div", {class:"qmeta"}, h("span", {class:"qnum"}, "№ " + q.n), h("span", {class:"tag"}, TYPE[it.t]), q.alt ? h("span", {class:"tag tag-var"}, "2 варианта") : null, h("span", null, SECT[q.sec].name)));
+  card.append(h("h2", {class:"qtext"}, it.q));
+  if(q.alt){
+    const isFile = st.variant === "file";
+    card.append(h("div", {class:"variant"},
+      h("div", {class:"var-h"}, "Ответы в файле и у Claude расходятся. Выберите вариант:"),
+      h("div", {class:"var-btns", role:"group", "aria-label":"Вариант ответа"},
+        h("button", {type:"button", class:"vbtn", "aria-pressed":String(isFile), disabled:st.done || null, onclick:() => switchVar(q, mode, "file")}, "Из файла «Редька тест БД»"),
+        h("button", {type:"button", class:"vbtn", "aria-pressed":String(!isFile), disabled:st.done || null, onclick:() => switchVar(q, mode, "mine")}, "Вариант Claude (по лекциям)")),
+      h("p", {class:"var-src"}, isFile ? "Сейчас: правильный ответ взят из файла «Редька тест БД», варианты-ловушки добавил Claude." : "Сейчас: варианты и правильный ответ составил Claude по лекциям из архива.")));
+  }
+  if(it.extra) card.append(renderExtra(it.extra));
+  if(!st.done) card.append(h("p", {class:"hint"}, HINT[it.t]));
+  if(it.t === "s" || it.t === "m") card.append(renderChoice(it, st));
+  else if(it.t === "o") card.append(renderOrder(it, st));
+  else if(it.t === "p") card.append(renderMatch(it, st));
+  else card.append(renderInput(q, it, st, mode));
+  const acts = h("div", {class:"actions"});
+  if(!st.done){
+    acts.append(h("button", {class:"btn primary btn-check", type:"button", disabled:!complete(it, st) || null, onclick:() => doCheck(q, st, mode)}, "Проверить"));
+    acts.append(h("button", {class:"btn", type:"button", onclick:() => doGiveUp(q, st, mode)}, mode === "round" ? "Не знаю — показать ответ" : "Показать ответ"));
+    card.append(acts);
+  } else if(mode === "view"){
+    acts.append(h("button", {class:"btn btn-next", type:"button", onclick:() => { browseSt[q.n] = prepare(q); rerender(); }}, "Ответить ещё раз"));
+    card.append(acts);
+  }
+  if(st.done) card.append(renderFeedback(q, it, st));
+  return card;
+}
+
+/* ---------- Экраны ---------- */
+function renderHeader(){
+  $("#round-name").textContent = `Круг ${round.no} · ${round.name}`;
+  $("#round-sql").textContent = round.sql;
+  const c = counts(), len = round.queue.length;
+  $("#round-stats").replaceChildren(
+    h("span", {class:"stat"}, "вопрос ", h("b", null, Math.min(round.idx + 1, len)), " из ", h("b", null, len)),
+    h("span", {class:"stat ok"}, "верно ", h("b", null, c.ok)),
+    h("span", {class:"stat bad"}, "ошибок ", h("b", null, c.bad)));
+  const strip = $("#strip"); strip.replaceChildren();
+  round.queue.forEach((n, i) => {
+    const s = round.res[n];
+    let cls = "seg";
+    if(s && s.done) cls += s.ok ? " ok" : " bad";
+    if(i === round.idx && view === "test") cls += " cur";
+    strip.append(h("button", {class:cls, type:"button", title:`№ ${n}`, "aria-label":`Перейти к вопросу ${n}`, onclick:() => goTo(i)}));
+  });
+  $("#btn-list").setAttribute("aria-pressed", String(view === "list"));
+  $("#btn-menu").setAttribute("aria-pressed", String(view === "menu"));
+}
+function renderTest(){
+  const v = $("#v-test"); v.replaceChildren();
+  const n = round.queue[round.idx], q = QM[n], st = getSt(n);
+  v.append(renderCard(q, st, "round"));
+  const last = round.idx === round.queue.length - 1;
+  v.append(h("div", {class:"qnav"},
+    h("button", {class:"btn ghost", type:"button", disabled:round.idx === 0 || null, onclick:() => goTo(round.idx - 1)}, "← Назад"),
+    h("span", {class:"pos"}, `${round.idx + 1} / ${round.queue.length}`),
+    st.done
+      ? h("button", {class:"btn primary btn-next", type:"button", onclick:goNext}, last ? "К итогам круга →" : "Дальше →")
+      : h("button", {class:"btn ghost", type:"button", onclick:goNext}, last ? "Пропустить, к итогам →" : "Пропустить →")));
+}
+function qRow(n, label){
+  const q = QM[n], s = prog.status[n];
+  return h("button", {class:"row" + (s === "ok" ? " ok" : s === "bad" ? " bad" : ""), type:"button", onclick:() => openView(n)},
+    h("span", {class:"num"}, n), h("span", {class:"rt"}, q.q), h("span", {class:"rk"}, label || (q.alt ? "2 варианта" : TYPE_SHORT[typeOf(q)])));
+}
+function renderSummary(){
+  const v = $("#v-summary"); v.replaceChildren();
+  const c = counts(), total = round.queue.length;
+  const again = round.queue.filter(n => { const s = round.res[n]; return !s || !s.done || !s.ok; });
+  const wrongN = c.bad, skipN = c.left;
+  const pOk = total ? c.ok / total * 100 : 0, pBad = total ? c.bad / total * 100 : 0;
+  const panel = h("div", {class:"panel"},
+    h("h1", {class:"h1"}, `Круг ${round.no} пройден`),
+    h("div", {class:"score"}, c.ok, h("small", null, `из ${total} верно`)),
+    h("div", {class:"bar", "aria-hidden":"true"}, h("span", {class:"b-ok", style:`width:${pOk}%`}), h("span", {class:"b-bad", style:`width:${pBad}%`})),
+    h("p", {class:"muted"}, `Ошибок: ${wrongN}. Пропущено: ${skipN}.`));
+  const acts = h("div", {class:"actions"});
+  if(again.length){
+    acts.append(h("button", {class:"btn primary", type:"button", onclick:() => startRound("retry", again, `Повтор ошибок круга ${round.no} (${again.length})`, "SELECT * FROM Вопросы WHERE Ответ <> 'верно' OR Ответ IS NULL")},
+      `Пройти заново неверные (${again.length})`));
+  } else {
+    panel.append(h("p", {class:"muted"}, "Все вопросы этого круга отвечены верно. Для закрепления пройдите весь тест вперемешку."));
+  }
+  acts.append(h("button", {class:"btn", type:"button", onclick:() => startRound("shuffle", shuffle(ALL), "Весь тест вперемешку", "SELECT * FROM Вопросы -- случайный порядок")}, "Весь тест вперемешку"));
+  acts.append(h("button", {class:"btn ghost", type:"button", onclick:() => goTo(round.queue.length - 1)}, "← К последнему вопросу"));
+  panel.append(acts);
+  v.append(h("div", {class:"stack"}, panel,
+    again.length ? h("div", {class:"stack"},
+      h("div", {class:"sec-h"}, "Вопросы для повторения — нажмите, чтобы посмотреть ответ"),
+      h("div", {class:"rows"}, again.map(n => { const s = round.res[n]; return qRow(n, s && s.done ? "ошибка" : "пропущен"); }))) : null));
+}
+function renderListRows(host){
+  host.replaceChildren();
+  const qn = norm(listQ);
+  let shown = 0;
+  for(let k = 1; k <= 4; k++){
+    const items = sectionQueue(k).filter(n => {
+      const s = prog.status[n];
+      if(listFilter === "bad" && s !== "bad") return false;
+      if(listFilter === "ok" && s !== "ok") return false;
+      if(listFilter === "none" && s) return false;
+      if(qn && !norm(n + " " + QM[n].q).includes(qn)) return false;
+      return true;
+    });
+    if(!items.length) continue;
+    shown += items.length;
+    host.append(h("div", {class:"sec-h"}, `Раздел ${k}. ${SECT[k].name} · ${SECT[k].from}–${SECT[k].to}`), h("div", {class:"rows"}, items.map(n => qRow(n))));
+  }
+  if(!shown) host.append(h("p", {class:"muted"}, "Ничего не найдено. Измените фильтр или поисковую строку."));
+}
+function renderList(){
+  const v = $("#v-list"); v.replaceChildren();
+  const sc = statusCounts();
+  const rowsHost = h("div", null);
+  const filters = h("div", {class:"filters", role:"group", "aria-label":"Фильтр"});
+  [["all", "Все", ALL.length], ["bad", "Ошибки", sc.bad], ["none", "Без ответа", sc.none], ["ok", "Верно", sc.ok]].forEach(([k, label, cnt]) =>
+    filters.append(h("button", {class:"fchip", type:"button", "aria-pressed":String(listFilter === k), onclick:() => { listFilter = k; renderList(); }}, `${label} · ${cnt}`)));
+  const search = h("input", {class:"inp", id:"list-search", type:"search", placeholder:"Поиск по тексту или номеру", value:listQ, "aria-label":"Поиск вопроса", autocomplete:"off"});
+  search.addEventListener("input", () => { listQ = search.value; renderListRows(rowsHost); });
+  v.append(h("div", {class:"stack"},
+    h("div", {class:"backbar"}, h("button", {class:"btn primary", type:"button", onclick:returnBack}, backLabel())),
+    h("div", null, h("h1", {class:"h1"}, "Все вопросы"),
+      h("p", {class:"muted"}, `По последнему ответу: верно ${sc.ok}, ошибок ${sc.bad}, без ответа ${sc.none}. Нажмите на вопрос, чтобы открыть его; текущий круг при этом не меняется.`)),
+    filters, search, rowsHost));
+  renderListRows(rowsHost);
+}
+function renderView(){
+  const v = $("#v-view"); v.replaceChildren();
+  const q = QM[viewN];
+  if(!browseSt[viewN]) browseSt[viewN] = prepare(q);
+  const st = browseSt[viewN];
+  const i = ALL.indexOf(viewN);
+  v.append(h("div", {class:"stack"},
+    h("div", {class:"backbar"},
+      h("button", {class:"btn primary", type:"button", onclick:returnBack}, backLabel()),
+      h("button", {class:"btn ghost", type:"button", onclick:openList}, "Все вопросы")),
+    h("p", {class:"note"}, "Режим просмотра: ответ здесь не влияет на текущий круг теста."),
+    renderCard(q, st, "view"),
+    h("div", {class:"qnav"},
+      h("button", {class:"btn ghost", type:"button", disabled:i === 0 || null, onclick:() => { viewN = ALL[i - 1]; rerender(); toTop(); }}, i > 0 ? `← № ${ALL[i - 1]}` : "←"),
+      h("span", {class:"pos"}, `№ ${viewN} из ${ALL.length}`),
+      h("button", {class:"btn ghost", type:"button", disabled:i === ALL.length - 1 || null, onclick:() => { viewN = ALL[i + 1]; rerender(); toTop(); }}, i < ALL.length - 1 ? `№ ${ALL[i + 1]} →` : "→"))));
+}
+function menuItem(title, desc, sql, onclick, disabled){
+  return h("button", {class:"menu-item", type:"button", disabled:disabled || null, onclick},
+    h("span", {class:"mi-t"}, title), h("span", {class:"mi-d"}, desc), sql ? h("span", {class:"mi-sql"}, sql) : null);
+}
+function renderMenu(){
+  const v = $("#v-menu"); v.replaceChildren();
+  const sc = statusCounts();
+  const notOk = ALL.filter(n => prog.status[n] !== "ok");
+  const bad = ALL.filter(n => prog.status[n] === "bad");
+  const list = h("div", {class:"menu-list"},
+    menuItem("Весь тест по порядку", "70 вопросов, № 1–70", "SELECT * FROM Вопросы ORDER BY Номер", () => startRound("all", ALL.slice(), "Весь тест по порядку", "SELECT * FROM Вопросы ORDER BY Номер")),
+    menuItem("Весь тест вперемешку", "70 вопросов в случайном порядке", "SELECT * FROM Вопросы -- случайный порядок", () => startRound("shuffle", shuffle(ALL), "Весь тест вперемешку", "SELECT * FROM Вопросы -- случайный порядок")),
+    menuItem("Только ошибки", bad.length ? `${bad.length} ${plural(bad.length, "вопрос", "вопроса", "вопросов")} с последним неверным ответом` : "Ошибок пока нет", "SELECT * FROM Вопросы WHERE Ответ = 'неверно'",
+      () => startRound("bad", bad, `Только ошибки (${bad.length})`, "SELECT * FROM Вопросы WHERE Ответ = 'неверно'"), !bad.length),
+    menuItem("Всё, что ещё не отвечено верно", notOk.length ? `${notOk.length} ${plural(notOk.length, "вопрос", "вопроса", "вопросов")}` : "Все 70 вопросов отвечены верно", "SELECT * FROM Вопросы WHERE Ответ IS NULL OR Ответ = 'неверно'",
+      () => startRound("notok", notOk, `Не отвеченные верно (${notOk.length})`, "SELECT * FROM Вопросы WHERE Ответ IS NULL OR Ответ = 'неверно'"), !notOk.length));
+  for(let k = 1; k <= 4; k++){
+    const s = SECT[k], qq = sectionQueue(k);
+    const sql = `SELECT * FROM Вопросы WHERE Номер BETWEEN ${s.from} AND ${s.to}`;
+    list.append(menuItem(`Раздел ${k}. ${s.name}`, `${qq.length} ${plural(qq.length, "вопрос", "вопроса", "вопросов")}, № ${s.from}–${s.to}`, sql, () => startRound("sec", qq, `Раздел ${k}. ${s.name}`, sql)));
+  }
+  const reset = menuConfirm
+    ? h("div", {class:"confirm"}, h("span", null, "Сбросить ответы по всем 70 вопросам и начать заново?"),
+        h("button", {class:"btn primary", type:"button", onclick:() => { prog.status = {}; roundNo = 0; Object.keys(browseSt).forEach(k => delete browseSt[k]); startRound("all", ALL.slice(), "Весь тест по порядку", "SELECT * FROM Вопросы ORDER BY Номер"); }}, "Да, сбросить"),
+        h("button", {class:"btn", type:"button", onclick:() => { menuConfirm = false; renderMenu(); }}, "Отмена"))
+    : h("button", {class:"btn ghost", type:"button", onclick:() => { menuConfirm = true; renderMenu(); }}, "Сбросить весь прогресс");
+  v.append(h("div", {class:"stack"},
+    h("div", {class:"backbar"}, h("button", {class:"btn primary", type:"button", onclick:returnBack}, backLabel())),
+    h("div", null, h("h1", {class:"h1"}, "Новый круг"),
+      h("p", {class:"muted"}, `Текущий круг заменится новым, общий прогресс сохранится. Сейчас верно отвечено ${sc.ok} из 70.`)),
+    list, h("div", null, reset)));
+}
+function rerender(){
+  if(view === "test" && round.idx >= round.queue.length) view = "summary";
+  for(const k of ["test", "summary", "list", "view", "menu"]) $("#v-" + k).hidden = k !== view;
+  renderHeader();
+  ({test:renderTest, summary:renderSummary, list:renderList, view:renderView, menu:renderMenu})[view]();
+}
+
+/* ---------- Запуск ---------- */
+function boot(){
+  const saved = load();
+  applyState(saved);
+  if(!round) round = makeRound("all", ALL.slice(), "Весь тест по порядку", "SELECT * FROM Вопросы ORDER BY Номер");
+  view = round.idx >= round.queue.length ? "summary" : "test";
+  $("#btn-list").addEventListener("click", () => view === "list" ? returnBack() : openList());
+  $("#btn-menu").addEventListener("click", () => view === "menu" ? returnBack() : openMenu());
+  document.addEventListener("keydown", e => {
+    if(e.key !== "Enter" || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const tag = (e.target && e.target.tagName || "").toLowerCase();
+    if(tag === "button" || tag === "input" || tag === "textarea" || tag === "a") return;
+    if(view !== "test") return;
+    const n = round.queue[round.idx], q = QM[n], st = getSt(n);
+    e.preventDefault();
+    if(st.done) goNext(); else if(complete(itOf(q, st), st)) doCheck(q, st, "round");
+  });
+  document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") flushRemote(); });
+  window.addEventListener("pagehide", () => flushRemote());
+  rerender();
+  updateSyncNote();
+  initRemote();
+}
+boot();
+</script>
+</html>
